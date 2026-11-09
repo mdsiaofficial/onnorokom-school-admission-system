@@ -1,0 +1,3 @@
+- to create class add a demo login button. just one click login. that will assume as a teacher logged in and show the ui for a teacher and teacher can create class
+- one user can apply for only one (one birth certificate number one application). if change birthcertificate number user can apply for that.
+- when teacher login- then no need to show the my applications. and application button in the classes list 
