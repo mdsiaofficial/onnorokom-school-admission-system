@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useClassesQuery, useMyHoldsQuery, useApplySeatMutation } from '@/api/queries';
 import { useStudentStore } from '@/stores/studentStore';
 import { useLanguageStore } from '@/stores/languageStore';
+import { useAuthStore } from '@/stores/authStore';
 import { formatDhakaTime, formatNumber } from '@/utils/formatters';
 import { getLocalizedErrorMessage } from '@/utils/errors';
 import { toast } from '@/components/ToastContainer';
@@ -23,6 +24,7 @@ export const ClassListPage: React.FC = () => {
   const navigate = useNavigate();
   const { isValid: isStudentIdValid } = useStudentStore();
   const { language } = useLanguageStore();
+  const { isTeacher } = useAuthStore();
 
   const [search, setSearch] = useState('');
   const [lastRefetchTime, setLastRefetchTime] = useState<Date>(new Date());
@@ -45,7 +47,14 @@ export const ClassListPage: React.FC = () => {
     }
   }, [dataUpdatedAt]);
 
-  // Map student's active hold or confirmation per class
+  // Map student's active hold or confirmation
+  const activeStudentHold = React.useMemo(() => {
+    if (myHolds && Array.isArray(myHolds)) {
+      return myHolds.find((h) => h.status === 'HELD' || h.status === 'CONFIRMED');
+    }
+    return null;
+  }, [myHolds]);
+
   const studentClassStatus = React.useMemo(() => {
     const map = new Map<string, 'HELD' | 'CONFIRMED'>();
     if (myHolds && Array.isArray(myHolds)) {
@@ -83,8 +92,8 @@ export const ClassListPage: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Banner when student ID not entered */}
-      {!isStudentIdValid && (
+      {/* Banner when student ID not entered (only when not in teacher mode) */}
+      {!isTeacher && !isStudentIdValid && (
         <div className="mb-6 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3.5 shadow-sm">
           <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
           <div className="text-sm">
@@ -211,12 +220,14 @@ export const ClassListPage: React.FC = () => {
                   >
                     {t('classes.table.available')}
                   </th>
-                  <th
-                    scope="col"
-                    className="py-3.5 pl-3 pr-6 text-right text-xs font-bold text-slate-600 uppercase tracking-wider"
-                  >
-                    {t('classes.table.action')}
-                  </th>
+                  {!isTeacher && (
+                    <th
+                      scope="col"
+                      className="py-3.5 pl-3 pr-6 text-right text-xs font-bold text-slate-600 uppercase tracking-wider"
+                    >
+                      {t('classes.table.action')}
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white">
@@ -237,6 +248,10 @@ export const ClassListPage: React.FC = () => {
                     disabledReason = t('classes.reasons.alreadyConfirmed');
                   } else if (isAlreadyHeld) {
                     disabledReason = t('classes.reasons.alreadyHeld');
+                  } else if (activeStudentHold) {
+                    disabledReason = activeStudentHold.status === 'CONFIRMED'
+                      ? (language === 'bn' ? `অন্য ক্লাসে ভর্তি নিশ্চিত হয়েছে (${activeStudentHold.className})` : `Already confirmed in ${activeStudentHold.className}`)
+                      : (language === 'bn' ? `অন্য ক্লাসে আবেদন চলমান আছে (${activeStudentHold.className})` : `Application pending in ${activeStudentHold.className}`);
                   } else if (isSeatsFull) {
                     disabledReason = t('classes.reasons.noSeats');
                   }
@@ -279,38 +294,40 @@ export const ClassListPage: React.FC = () => {
                           {formatNumber(cls.availableSeats)}
                         </span>
                       </td>
-                      <td className="py-4 pl-3 pr-6 text-right whitespace-nowrap">
-                        <div className="inline-flex flex-col items-end">
-                          <button
-                            type="button"
-                            disabled={isDisabled}
-                            onClick={() => handleApply(cls.id, cls.name)}
-                            className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all shadow-sm ${
-                              isDisabled
-                                ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
-                                : 'bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white shadow-emerald-600/20 hover:shadow-md'
-                            }`}
-                            title={disabledReason || undefined}
-                          >
-                            {isApplyingThis ? (
-                              <>
-                                <RefreshCw className="w-4 h-4 animate-spin" />
-                                <span>{t('classes.applying')}</span>
-                              </>
-                            ) : (
-                              <>
-                                <span>{t('classes.applyButton')}</span>
-                                <ArrowRight className="w-4 h-4" />
-                              </>
+                      {!isTeacher && (
+                        <td className="py-4 pl-3 pr-6 text-right whitespace-nowrap">
+                          <div className="inline-flex flex-col items-end">
+                            <button
+                              type="button"
+                              disabled={isDisabled}
+                              onClick={() => handleApply(cls.id, cls.name)}
+                              className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all shadow-sm ${
+                                isDisabled
+                                  ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
+                                  : 'bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white shadow-emerald-600/20 hover:shadow-md'
+                              }`}
+                              title={disabledReason || undefined}
+                            >
+                              {isApplyingThis ? (
+                                <>
+                                  <RefreshCw className="w-4 h-4 animate-spin" />
+                                  <span>{t('classes.applying')}</span>
+                                </>
+                              ) : (
+                                <>
+                                  <span>{t('classes.applyButton')}</span>
+                                  <ArrowRight className="w-4 h-4" />
+                                </>
+                              )}
+                            </button>
+                            {disabledReason && (
+                              <span className="text-[11px] text-slate-500 mt-1 max-w-[200px] text-right truncate">
+                                {disabledReason}
+                              </span>
                             )}
-                          </button>
-                          {disabledReason && (
-                            <span className="text-[11px] text-slate-500 mt-1 max-w-[200px] text-right truncate">
-                              {disabledReason}
-                            </span>
-                          )}
-                        </div>
-                      </td>
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   );
                 })}
@@ -336,6 +353,10 @@ export const ClassListPage: React.FC = () => {
                 disabledReason = t('classes.reasons.alreadyConfirmed');
               } else if (isAlreadyHeld) {
                 disabledReason = t('classes.reasons.alreadyHeld');
+              } else if (activeStudentHold) {
+                disabledReason = activeStudentHold.status === 'CONFIRMED'
+                  ? (language === 'bn' ? `অন্য ক্লাসে ভর্তি নিশ্চিত হয়েছে (${activeStudentHold.className})` : `Already confirmed in ${activeStudentHold.className}`)
+                  : (language === 'bn' ? `অন্য ক্লাসে আবেদন চলমান আছে (${activeStudentHold.className})` : `Application pending in ${activeStudentHold.className}`);
               } else if (isSeatsFull) {
                 disabledReason = t('classes.reasons.noSeats');
               }
@@ -390,28 +411,30 @@ export const ClassListPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <button
-                    type="button"
-                    disabled={isDisabled}
-                    onClick={() => handleApply(cls.id, cls.name)}
-                    className={`w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-sm font-semibold transition-all shadow-sm ${
-                      isDisabled
-                        ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
-                        : 'bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white'
-                    }`}
-                  >
-                    {isApplyingThis ? (
-                      <>
-                        <RefreshCw className="w-4 h-4 animate-spin" />
-                        <span>{t('classes.applying')}</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>{t('classes.applyButton')}</span>
-                        <ArrowRight className="w-4 h-4" />
-                      </>
-                    )}
-                  </button>
+                  {!isTeacher && (
+                    <button
+                      type="button"
+                      disabled={isDisabled}
+                      onClick={() => handleApply(cls.id, cls.name)}
+                      className={`w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-sm font-semibold transition-all shadow-sm ${
+                        isDisabled
+                          ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
+                          : 'bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white'
+                      }`}
+                    >
+                      {isApplyingThis ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                          <span>{t('classes.applying')}</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>{t('classes.applyButton')}</span>
+                          <ArrowRight className="w-4 h-4" />
+                        </>
+                      )}
+                    </button>
+                  )}
 
                   {disabledReason && (
                     <p className="text-xs text-center text-slate-500">

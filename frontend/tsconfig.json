@@ -8,7 +8,10 @@
 
     /* Bundler mode */
     "moduleResolution": "bundler",
-    "allowImportingTsExtensions": false,
+    "allowImportingTsExtensions": true,
+    "allowArbitraryExtensions": true,
+    "customConditions": ["module"],
+    "esModuleInterop": true,
     "isolatedModules": true,
     "moduleDetection": "force",
     "noEmit": true,
@@ -19,9 +22,9 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true,
 
     /* Path alias */
-    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
     }

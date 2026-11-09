@@ -2,13 +2,15 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useCreateClassMutation } from '@/api/queries';
+import { useAuthStore } from '@/stores/authStore';
 import { toast } from '@/components/ToastContainer';
 import { getLocalizedErrorMessage } from '@/utils/errors';
-import { PlusCircle, School, Users, ArrowLeft, RefreshCw } from 'lucide-react';
+import { PlusCircle, School, Users, ArrowLeft, RefreshCw, Lock, LogIn, UserCheck2 } from 'lucide-react';
 
 export const AdminCreateClassPage: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { isTeacher, teacherName, loginAsTeacher } = useAuthStore();
   const createClassMutation = useCreateClassMutation();
 
   const [name, setName] = useState('');
@@ -52,17 +54,57 @@ export const AdminCreateClassPage: React.FC = () => {
     }
   };
 
+  if (!isTeacher) {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 text-center">
+        <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm">
+          <div className="w-16 h-16 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto mb-4">
+            <Lock className="w-8 h-8" />
+          </div>
+          <h2 className="text-xl font-bold text-slate-900 mb-2">
+            শুধুমাত্র শিক্ষকদের জন্য সংরক্ষিত
+          </h2>
+          <p className="text-sm text-slate-500 mb-6 leading-relaxed">
+            নতুন ক্লাস তৈরি এবং আসন বরাদ্দ করার জন্য শিক্ষক হিসেবে লগইন করা আবশ্যক। নিচে এক-ক্লিকে ডেমো লগইন করুন।
+          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <button
+              onClick={loginAsTeacher}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-6 rounded-xl shadow-md transition"
+            >
+              <LogIn className="w-4 h-4" />
+              <span>এক-ক্লিক শিক্ষক লগইন (Demo)</span>
+            </button>
+            <button
+              onClick={() => navigate('/')}
+              className="w-full sm:w-auto text-slate-600 hover:text-slate-900 font-semibold py-2.5 px-4 text-sm"
+            >
+              ক্লাস তালিকায় ফিরুন
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Back button */}
-      <button
-        type="button"
-        onClick={() => navigate('/')}
-        className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800 transition mb-6"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        <span>ক্লাস তালিকায় ফিরে যান</span>
-      </button>
+      <div className="flex items-center justify-between mb-6">
+        <button
+          type="button"
+          onClick={() => navigate('/')}
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800 transition"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>ক্লাস তালিকায় ফিরে যান</span>
+        </button>
+
+        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 px-3 py-1 rounded-full">
+          <UserCheck2 className="w-3.5 h-3.5" />
+          <span>{teacherName} হিসেবে লগইন আছেন</span>
+        </span>
+      </div>
 
       {/* Card Header */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8">
