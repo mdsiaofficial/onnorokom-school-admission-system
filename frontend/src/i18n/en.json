@@ -1,0 +1,131 @@
+{
+  "app": {
+    "title": "School Admission Portal",
+    "subtitle": "Online Admission Application & Seat Management",
+    "nav": {
+      "classes": "Classes",
+      "myApplications": "My Applications",
+      "createClass": "Create Class"
+    },
+    "language": {
+      "toggle": "বাংলা"
+    }
+  },
+  "studentBar": {
+    "label": "Student Birth Registration Number (17 Digits):",
+    "placeholder": "Enter 17-digit birth registration number...",
+    "counter": "{{current}}/17",
+    "helper": "A 17-digit birth registration number is required to apply and track admissions.",
+    "valid": "Valid Student ID",
+    "incomplete": "Complete 17 digits",
+    "clear": "Clear",
+    "requiredNotice": "Please enter a 17-digit Student ID at the top before applying."
+  },
+  "classes": {
+    "title": "Available Classes & Seats",
+    "description": "Real-time updates of seat availability across classes and shifts.",
+    "lastUpdated": "Last updated: {{time}}",
+    "pollingActive": "Live connection active",
+    "pollingError": "Connection lost, retrying...",
+    "searchPlaceholder": "Search class name...",
+    "empty": "No classes found.",
+    "table": {
+      "className": "Class & Shift",
+      "total": "Total Seats",
+      "held": "In Process",
+      "confirmed": "Confirmed",
+      "available": "Available",
+      "action": "Action"
+    },
+    "applyButton": "Apply",
+    "applying": "Applying...",
+    "reasons": {
+      "enterStudentId": "Enter 17-digit Student ID above",
+      "noSeats": "No seats available",
+      "alreadyHeld": "Active hold already exists in this class",
+      "alreadyConfirmed": "Admission already confirmed in this class"
+    },
+    "applySuccess": "Seat successfully held for 10 minutes! Please visit 'My Applications' to complete the admission payment."
+  },
+  "myApplications": {
+    "title": "My Applications",
+    "description": "Current status of your admission applications and fee payment.",
+    "noStudentId": "Please enter your 17-digit Student ID above to view your applications.",
+    "empty": "You have no applications yet. Apply from the class list.",
+    "goToClasses": "View Class List",
+    "table": {
+      "class": "Class Name",
+      "status": "Status",
+      "timeRemaining": "Time Remaining",
+      "expiry": "Expiry Time",
+      "actions": "Actions"
+    },
+    "status": {
+      "HELD": "Held",
+      "CONFIRMED": "Confirmed",
+      "EXPIRED": "Expired",
+      "CANCELLED": "Cancelled"
+    },
+    "timer": {
+      "remaining": "{{time}} remaining",
+      "expired": "Expired"
+    },
+    "actions": {
+      "pay": "Pay Fee",
+      "paying": "Processing...",
+      "cancel": "Cancel Hold",
+      "cancelling": "Cancelling...",
+      "confirmedNote": "Admission Confirmed",
+      "expiredNote": "Hold Expired",
+      "cancelledNote": "Application Cancelled"
+    },
+    "cancelConfirmModal": {
+      "title": "Confirm Cancellation",
+      "message": "Are you sure you want to cancel the hold for '{{className}}'? The seat will be immediately released for other applicants.",
+      "confirm": "Yes, Cancel",
+      "cancel": "No, Go Back"
+    },
+    "alerts": {
+      "confirmSuccess": "Admission successfully confirmed! Congratulations.",
+      "cancelSuccess": "Application hold successfully cancelled."
+    }
+  },
+  "admin": {
+    "title": "Create New Class or Shift",
+    "description": "Configure new classes, shifts, and seat quotas.",
+    "form": {
+      "nameLabel": "Class Name & Shift",
+      "namePlaceholder": "e.g. Class 6 - Morning Shift",
+      "nameHelp": "Specify class name and shift clearly (1-120 characters).",
+      "seatsLabel": "Total Seats",
+      "seatsPlaceholder": "e.g. 60",
+      "seatsHelp": "Total number of seats must be a positive integer.",
+      "submit": "Create Class",
+      "submitting": "Creating...",
+      "success": "New class successfully created!"
+    }
+  },
+  "errors": {
+    "SEATS_FULL": "Sorry, no seats are available in this class.",
+    "ALREADY_HELD": "You already have an active application in this class.",
+    "ALREADY_CONFIRMED": "Your admission in this class is already confirmed.",
+    "HOLD_EXPIRED": "Your application hold has expired. Please apply again.",
+    "HOLD_CANCELLED": "This application was already cancelled.",
+    "HOLD_ALREADY_CONFIRMED": "Cannot cancel an already confirmed admission.",
+    "NOT_HOLD_OWNER": "You are not authorized to modify this application.",
+    "HOLD_NOT_FOUND": "Application not found.",
+    "CLASS_NOT_FOUND": "Class not found.",
+    "INVALID_STUDENT_ID": "Birth registration number must be exactly 17 digits.",
+    "NETWORK_ERROR": "Unable to connect to the server. Please try again later.",
+    "TIMEOUT": "Request timed out. Please try again.",
+    "GENERIC": "Something went wrong. Please try again."
+  },
+  "common": {
+    "loading": "Loading...",
+    "errorBoundaryTitle": "Something went wrong",
+    "errorBoundaryDesc": "An unexpected error occurred. Please reload the page.",
+    "reload": "Reload Page",
+    "close": "Close",
+    "seats": "seats"
+  }
+}
