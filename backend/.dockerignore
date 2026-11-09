@@ -1,0 +1,14 @@
+bin/
+obj/
+publish/
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.sln.docstates
+*.log
+.git/
+.gitignore
+Dockerfile
+.dockerignore
