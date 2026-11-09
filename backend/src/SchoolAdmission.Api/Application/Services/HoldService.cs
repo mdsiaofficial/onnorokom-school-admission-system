@@ -70,30 +70,35 @@ public class HoldService : IHoldService
             await cleanupCmd.ExecuteNonQueryAsync(cancellationToken);
         }
 
-        // 3. Check if student already has active HELD or CONFIRMED hold in this class
+        // 3. Check if student already has any active HELD or CONFIRMED hold across the system (one application per student)
         await using (var checkCmd = conn.CreateCommand())
         {
             checkCmd.Transaction = dbTx;
-            checkCmd.CommandText = @"SELECT status 
+            checkCmd.CommandText = @"SELECT class_id, status 
                                      FROM holds 
-                                     WHERE class_id = @classId 
-                                       AND student_id = @studentId 
+                                     WHERE student_id = @studentId 
                                        AND (status = 'CONFIRMED' OR (status = 'HELD' AND expires_at > @now))
                                      LIMIT 1;";
-            checkCmd.Parameters.Add(new NpgsqlParameter("classId", classId));
             checkCmd.Parameters.Add(new NpgsqlParameter("studentId", studentId));
             checkCmd.Parameters.Add(new NpgsqlParameter("now", now));
             await using var checkReader = await checkCmd.ExecuteReaderAsync(cancellationToken);
             if (await checkReader.ReadAsync(cancellationToken))
             {
-                var existingStatus = checkReader.GetString(0);
+                var existingClassId = checkReader.GetGuid(0);
+                var existingStatus = checkReader.GetString(1);
                 if (existingStatus == "CONFIRMED")
                 {
-                    throw ProblemException.Conflict("ALREADY_CONFIRMED", "You have already confirmed admission for this class.");
+                    throw ProblemException.Conflict("ALREADY_CONFIRMED", 
+                        existingClassId == classId 
+                            ? "You have already confirmed admission for this class."
+                            : "This student birth registration already has a confirmed admission in another class. One application allowed per student.");
                 }
                 if (existingStatus == "HELD")
                 {
-                    throw ProblemException.Conflict("ALREADY_HELD", "You already have an active hold for this class.");
+                    throw ProblemException.Conflict("ALREADY_HELD", 
+                        existingClassId == classId
+                            ? "You already have an active hold for this class."
+                            : "This student birth registration already has an active seat application in progress. Complete or cancel it first.");
                 }
             }
         }

@@ -61,8 +61,8 @@ public class HoldConfiguration : IEntityTypeConfiguration<Hold>
         builder.HasIndex(h => new { h.StudentId, h.CreatedAt })
             .HasDatabaseName("ix_holds_student_created");
 
-        builder.HasIndex(h => new { h.StudentId, h.ClassId })
-            .HasDatabaseName("ux_holds_active_student_class")
+        builder.HasIndex(h => h.StudentId)
+            .HasDatabaseName("ux_holds_active_student")
             .HasFilter("status IN ('HELD', 'CONFIRMED')")
             .IsUnique();
     }

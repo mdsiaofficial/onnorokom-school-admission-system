@@ -68,9 +68,9 @@ public partial class InitialCreate : Migration
             columns: new[] { "student_id", "created_at" });
 
         migrationBuilder.CreateIndex(
-            name: "ux_holds_active_student_class",
+            name: "ux_holds_active_student",
             table: "holds",
-            columns: new[] { "student_id", "class_id" },
+            column: "student_id",
             unique: true,
             filter: "status IN ('HELD', 'CONFIRMED')");
     }

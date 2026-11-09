@@ -310,31 +310,25 @@ public class ApiContractTests : IClassFixture<SchoolAdmissionApiFactory>
         Assert.NotNull(class1);
         Assert.NotNull(class2);
 
-        var studentId = $"508000000{Random.Shared.Next(10000000, 99999999)}";
+        var studentId1 = $"508000000{Random.Shared.Next(10000000, 99999999)}";
+        var studentId2 = $"508000000{Random.Shared.Next(10000000, 99999999)}";
 
-        // Apply for class1
-        await _client.PostApplyHoldAsync(class1.Id, studentId);
-
-        // Apply for class2
-        await _client.PostApplyHoldAsync(class2.Id, studentId);
+        // Apply for class1 and class2 with distinct students
+        await _client.PostApplyHoldAsync(class1.Id, studentId1);
+        await _client.PostApplyHoldAsync(class2.Id, studentId2);
 
         // 1. Success path: GET /me/holds with X-Student-Id
-        var response = await _client.GetMyHoldsAsync(studentId);
+        var response = await _client.GetMyHoldsAsync(studentId1);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var myHolds = await response.ReadJsonAsync<List<StudentHoldResponse>>();
         Assert.NotNull(myHolds);
-        Assert.True(myHolds.Count >= 2);
+        Assert.Single(myHolds);
 
         var myHold1 = myHolds.FirstOrDefault(h => h.ClassId == class1.Id);
         Assert.NotNull(myHold1);
         Assert.Equal(className1, myHold1.ClassName);
         Assert.Equal("HELD", myHold1.Status);
-
-        var myHold2 = myHolds.FirstOrDefault(h => h.ClassId == class2.Id);
-        Assert.NotNull(myHold2);
-        Assert.Equal(className2, myHold2.ClassName);
-        Assert.Equal("HELD", myHold2.Status);
 
         // 2. Error path: Missing or bad X-Student-Id -> 400 ProblemDetails INVALID_STUDENT_ID
         var badResponse = await _client.GetMyHoldsAsync("short-id");
