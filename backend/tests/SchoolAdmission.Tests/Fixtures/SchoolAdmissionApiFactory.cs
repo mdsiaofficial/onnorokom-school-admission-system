@@ -37,7 +37,7 @@ public class SchoolAdmissionApiFactory : WebApplicationFactory<Program>
         }
 
         // Try Docker container IP on host if reachable
-        foreach (var ip in new[] { "172.18.0.2", "172.17.0.2", "172.19.0.2", "172.20.0.2" })
+        foreach (var ip in new[] { "172.18.0.1", "172.18.0.2", "172.18.0.3", "172.18.0.4", "172.17.0.1", "172.17.0.2", "172.17.0.3", "172.17.0.4", "172.19.0.1", "172.19.0.2", "172.19.0.3", "172.19.0.4", "172.20.0.1", "172.20.0.2", "172.20.0.3", "172.20.0.4"  })
         {
             if (CanConnectToPort(ip, 5432))
             {

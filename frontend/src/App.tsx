@@ -29,8 +29,12 @@ export const App: React.FC = () => {
               <div>
                 © 2026 স্কুল ভর্তি পোর্টাল (School Admission Portal) — গণপ্রজাতন্ত্রী বাংলাদেশ
               </div>
-              <div className="font-mono text-slate-400">
-                Time Zone: Asia/Dhaka (UTC+6)
+              <div className="flex flex-wrap items-center gap-3 font-mono text-xs text-slate-400">
+                <span>UI: {typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.host}` : 'http://localhost:3000'}</span>
+                <span>•</span>
+                <span>API: {typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.hostname}:8080` : 'http://localhost:8080'}</span>
+                <span>•</span>
+                <span>UTC+6</span>
               </div>
             </div>
           </footer>

@@ -86,6 +86,26 @@ app.UseCors("AllowFrontend");
 app.UseSwagger();
 app.UseSwaggerUI();
 
+// Startup informational banner with both URLs
+app.Lifetime.ApplicationStarted.Register(() =>
+{
+    var hostName = System.Net.Dns.GetHostName();
+    var ipAddresses = System.Net.Dns.GetHostAddresses(hostName)
+        .Where(a => a.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+        .Select(a => a.ToString())
+        .ToList();
+
+    app.Logger.LogInformation("=================================================");
+    app.Logger.LogInformation("  School Admission Backend API is live!");
+    app.Logger.LogInformation("  ➜ Local:   http://localhost:8080");
+    foreach (var ip in ipAddresses)
+    {
+        app.Logger.LogInformation("  ➜ Network: http://{Ip}:8080", ip);
+    }
+    app.Logger.LogInformation("  ➜ Swagger: http://localhost:8080/swagger");
+    app.Logger.LogInformation("=================================================");
+});
+
 // 11. Map Endpoints
 app.MapClassEndpoints();
 app.MapHoldEndpoints();

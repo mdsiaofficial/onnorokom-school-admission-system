@@ -1,1 +1,52 @@
+# Build artifacts - .NET
+bin/
+obj/
+publish/
+
+# Build artifacts - Node / Vite / Frontend
+node_modules/
+dist/
+dist-ssr/
+*.local
+.vite/
+
+# Environment files (preserve template)
+.env
+.env.*
+!.env.example
+
+# Databases
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# IDE / Editor configuration
+.vs/
+.vscode/
+.idea/
+*.user
+*.userosscache
+*.suo
+*.sln.docstates
+
+# Operating System files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# Logs
+*.log
+logs/
+
+# Docker compose overrides
+docker-compose.override.yml
+
+# Assignment Brief and Private Documents / Notes (per assignment confidentiality instructions)
 2026-11-08-assignment-brief-assistant-se-bangla_3e17ac4e-5f43-4bc2-8aa9-0c3f887f82d5.*
+*assignment-brief*
+*.pdf
+private/
+notes/
+*.private.*
