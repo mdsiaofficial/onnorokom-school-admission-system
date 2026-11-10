@@ -93,6 +93,8 @@
 school-admission/
 ├─ backend/
 │  ├─ Dockerfile
+│  ├─ .env              (backend + database configuration)
+│  ├─ .env.example
 │  ├─ SchoolAdmission.sln
 │  ├─ src/
 │  │  └─ SchoolAdmission.Api/
@@ -108,6 +110,8 @@ school-admission/
 ├─ frontend/
 │  ├─ Dockerfile
 │  ├─ .dockerignore
+│  ├─ .env              (VITE_API_BASE_URL)
+│  ├─ .env.example
 │  ├─ index.html
 │  └─ src/
 │     ├─ app/            (router, providers, layout)
@@ -117,7 +121,6 @@ school-admission/
 │     ├─ i18n/           (bn.json, en.json)
 │     └─ components/
 ├─ docker-compose.yml
-├─ .env.example
 ├─ .gitignore          (must ignore private docs/notes)
 ├─ README.md
 ├─ ASSUMPTIONS.md
@@ -463,8 +466,13 @@ Plus: a top-level React **Error Boundary** (never a blank page), loading skeleto
 - It must be a URL the **browser** can reach (`http://localhost:8080`), **not** the Docker-internal `http://backend:8080`.
 - Because the browser calls the backend directly, the backend sends **CORS** headers for `http://localhost:3000` (`CORS_ALLOWED_ORIGINS`).
 
-### 10.6 `.env.example`
-`POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `HOLD_DURATION_SECONDS`, `SEED_DEMO_DATA`, `VITE_API_BASE_URL`, `CORS_ALLOWED_ORIGINS`. Compose has working defaults, so `docker compose up` needs **no `.env` file**.
+### 10.6 Per-service env files
+Each app gets its own env file, loaded by Compose through `env_file:`:
+
+- `backend/.env` — `ASPNETCORE_ENVIRONMENT`, `ASPNETCORE_HTTP_PORTS`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `ConnectionStrings__Default`, `HOLD_DURATION_SECONDS`, `EXPIRY_SWEEP_INTERVAL_SECONDS`, `SEED_DEMO_DATA`, `CORS_ALLOWED_ORIGINS`.
+- `frontend/.env` — `VITE_API_BASE_URL`.
+
+Both files are committed with working defaults (plus `.env.example` templates), so `docker compose up` needs **no manual setup**. A host shell variable of the same name overrides the file for a single run.
 
 ---
 

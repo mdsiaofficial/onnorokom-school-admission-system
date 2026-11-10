@@ -1,0 +1,12 @@
+# Build artifacts - .NET
+bin/
+obj/
+publish/
+
+# Environment files
+#   backend/.env is tracked on purpose: it holds local-development placeholders
+#   only (no real credentials) and it keeps `docker compose up` working without a
+#   manual setup step. Override a value with the host environment for a single
+#   run instead of writing real credentials here.
+.env.*
+!.env.example

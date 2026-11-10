@@ -262,6 +262,13 @@ The threat model was constructed around the high-concurrency admission rush hour
 - `.gitignore` explicitly excludes:
   - Confidential recruitment files: `2026-11-08-assignment-brief*`, `*assignment-brief*`, `*.pdf`, `private/`, `notes/`.
   - Secrets and environment files: `.env`, `.env.*` (preserving template `!.env.example`).
+    - **Exception:** `backend/.env` and `frontend/.env` are tracked deliberately. They contain
+      local-development placeholders only (`postgres`/`postgres`, `localhost` URLs) — no real
+      credentials — and they are what lets `docker compose up` work without a manual setup step.
+      Real credentials must never be written there; override them with the host shell
+      environment for a single run instead.
+  - `.env` files are also excluded from the Docker build contexts (`backend/.dockerignore`,
+    `frontend/.dockerignore`), so no configuration is baked into an image layer.
   - Local databases: `*.db`, `*.sqlite`, `*.sqlite3`.
   - Node & .NET build artifacts: `bin/`, `obj/`, `node_modules/`, `dist/`.
 - Verified via `git check-ignore`: Confidential assignment brief and local files are completely ignored by Git.

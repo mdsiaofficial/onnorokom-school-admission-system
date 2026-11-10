@@ -10,7 +10,7 @@ Designed for first-come, first-served admission rush hours with strict concurren
 
 ## 1. Quick Start (One Command)
 
-The entire application runs with a single command on any machine with Docker installed. No local .NET, Node.js, or PostgreSQL installations are required.
+The entire application runs with a single command on any machine with Docker installed. No local .NET, Node.js, or PostgreSQL installations are required, and no manual `.env` setup is needed — each app ships with its own ready-to-edit env file (`backend/.env` and `frontend/.env`).
 
 ```bash
 docker compose up --build
@@ -143,21 +143,57 @@ dotnet test backend/SchoolAdmission.sln --logger:console;verbosity=normal
 
 ## 6. Environment Configuration
 
-Default values are pre-configured in `docker-compose.yml`. You can copy `.env.example` to `.env` to override:
+Each application has its **own dedicated env file**, next to the code it configures:
+
+| File | Configures | Template |
+|---|---|---|
+| `backend/.env` | The API **and** the PostgreSQL service it connects to (connection string, hold duration, CORS origins, seeding) | `backend/.env.example` |
+| `frontend/.env` | The backend URL the browser calls | `frontend/.env.example` |
+
+Both files are committed with working local-development defaults, so `docker compose up` needs no
+manual setup. To change a value, edit the file and run `docker compose up -d <service>` —
+Compose detects the changed file and recreates the container.
+
+### `backend/.env`
 
 | Variable | Default | Description |
 |---|---|---|
-| `POSTGRES_USER` | `postgres` | Database superuser |
-| `POSTGRES_PASSWORD` | `postgres` | Database password |
-| `POSTGRES_DB` | `school_admission` | Database name |
+| `ASPNETCORE_ENVIRONMENT` | `Development` | ASP.NET Core environment |
+| `ASPNETCORE_HTTP_PORTS` | `8080` | Port the API listens on |
+| `POSTGRES_USER` | `postgres` | Database superuser (used by the `db` service) |
+| `POSTGRES_PASSWORD` | `postgres` | Database password (used by the `db` service) |
+| `POSTGRES_DB` | `school_admission` | Database name (used by the `db` service) |
+| `ConnectionStrings__Default` | `Host=db;Port=5432;…` | **Database connection used by the API.** Inside Docker the host is the Compose service name `db`; use `Host=localhost` when running the API directly on the host. |
 | `HOLD_DURATION_SECONDS` | `600` | Seat hold duration (10 minutes). Must be a positive integer — the API refuses to start otherwise. |
+| `EXPIRY_SWEEP_INTERVAL_SECONDS` | `5` | How often expired holds are swept |
 | `SEED_DEMO_DATA` | `true` | Seed 12 standard classes on clean DB |
 | `CORS_ALLOWED_ORIGINS` | `http://localhost:3000` | Allowed browser origins (comma-separated). Requests from any other origin are rejected. |
-| `VITE_API_BASE_URL` | `http://localhost:8080` | Backend API URL reachable by browser |
 
-> `.env` is read by Docker Compose, not by the app — after editing it, recreate the container
-> (`docker compose up -d --force-recreate backend`); a plain `restart` keeps the old values.
+### `frontend/.env`
+
+| Variable | Default | Description |
+|---|---|---|
+| `VITE_API_BASE_URL` | `http://localhost:8080` | Backend API URL reachable **by the browser** (not `http://backend:8080`) |
+
+### How values reach the app
+
+Docker Compose loads each file with `env_file:` and passes the variables into the container.
+Inside the container the ASP.NET Core configuration stack then resolves them
+(env var → `appsettings.json` → `appsettings.{Environment}.json` → code default).
+
+> `docker compose restart` reuses the existing container's environment — use `up -d` instead.
 > See [`TECH_STACK.md`](TECH_STACK.md) for the full configuration precedence chain.
+
+### Running a service locally, without Docker
+
+```bash
+# backend — .NET does not read .env files on its own, so export them first
+set -a; source backend/.env; set +a
+dotnet run --project backend
+
+# frontend — Vite loads frontend/.env automatically
+cd frontend && npm install && npm run dev
+```
 
 ---
 

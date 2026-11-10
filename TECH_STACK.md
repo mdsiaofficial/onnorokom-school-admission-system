@@ -97,7 +97,7 @@ utils/     countdown, formatters, error mapping
 | **Docker Compose** | One command brings up db + backend + frontend. `depends_on: { condition: service_healthy }` guarantees the API only starts once Postgres accepts connections. |
 | **Compose `develop.watch`** | Rebuilds the backend on C# changes and syncs frontend sources into the container, so the edit–reload loop needs no manual restarts. |
 | **Health endpoints** (`/health/live`, `/health/ready`) | Compose gates the frontend on the backend being *ready* (database reachable), not merely *running* — no crash-looping on a slow database start. |
-| **`.env` + `${VAR:-default}`** | Layered configuration: `.env` → compose default → `appsettings.json` → code default. Ops can retune `HOLD_DURATION_SECONDS` with a container recreate, no rebuild. |
+| **Per-service `.env` files + Compose `env_file:`** | `backend/.env` configures the API *and* its PostgreSQL service; `frontend/.env` configures the browser-side API URL. One file per app, so a frontend change never touches backend config. Files are committed with working defaults — `docker compose up` needs no manual setup. |
 | **Non-root container user** (`USER $APP_UID`) | The runtime stage runs as UID 1654 — least privilege inside the container. |
 | **ICU libraries + `DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false`** | Alpine ships without full ICU; without this, culture-aware formatting and Bengali text handling break. |
 | **`wget` in the runtime image** | Backs the Compose healthcheck without adding curl as a second HTTP client. |
@@ -107,18 +107,36 @@ utils/     countdown, formatters, error mapping
 For `HOLD_DURATION_SECONDS`, resolved by `HoldOptions`:
 
 ```
-shell export
-  → .env
-    → docker-compose.yml   ${HOLD_DURATION_SECONDS:-600}
-      → container env var
-        → ASP.NET Core config: env var  >  appsettings.json  >  appsettings.{Environment}.json
-          → HoldOptions.DurationSeconds   (validated > 0 at startup)
+backend/.env                (loaded by Compose via env_file:)
+  → container env var
+    → ASP.NET Core config: env var  >  appsettings.json  >  appsettings.{Environment}.json
+      → HoldOptions.DurationSeconds   (validated > 0 at startup)
 ```
 
-The environment variable name is stable across environments and is what compose, `.env` and
-the test fixtures all set. `appsettings.json` keeps the local-run default. A non-numeric or
-non-positive value now **fails the process at startup** with an explicit message instead of
-silently falling back to 600 or throwing on a live request.
+Each app owns exactly one env file, and Docker Compose is the only thing that reads it:
+
+```yaml
+env_file:
+  - ./backend/.env
+```
+
+`env_file:` is the *only* source for these variables — a variable must not also appear in
+the service's `environment:` block, because Compose gives `environment:` precedence and
+would override the file value (with an empty string, if written in the list form). That is
+why the compose file contains no `${VAR:-default}` interpolation for them.
+
+To change a value, edit the env file and run `docker compose up -d <service>`: Compose
+hashes the env file contents and recreates the container automatically. For a throw-away
+container, override it on the command line:
+
+```bash
+docker compose run --rm -e HOLD_DURATION_SECONDS=30 backend
+```
+
+The environment variable name is stable across environments and is what Compose, the env
+files and the test fixtures all set. `appsettings.json` keeps the local-run default. A
+non-numeric or non-positive value **fails the process at startup** with an explicit message
+instead of silently falling back to 600 or throwing on a live request.
 
 ---
 
@@ -165,13 +183,6 @@ docker compose watch
 # (the test image is a separate Docker stage — rebuild it after backend changes)
 docker compose --profile test build backend-tests
 docker compose --profile test run --rm backend-tests
-
-# Change the hold duration (then recreate the container — .env is read by Compose, not the app)
-echo "HOLD_DURATION_SECONDS=60" >> .env
-docker compose up -d --force-recreate backend
-
-# Inspect the effective config inside the container
-docker exec school_admission_backend printenv HOLD_DURATION_SECONDS
 
 # API docs
 open http://localhost:8080/swagger

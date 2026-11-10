@@ -12,3 +12,7 @@ publish/
 .gitignore
 Dockerfile
 .dockerignore
+# Environment files are injected at runtime by Docker Compose (env_file),
+# never baked into the image.
+.env
+.env.*

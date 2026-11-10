@@ -4,10 +4,9 @@ services:
     container_name: school_admission_db
     restart: unless-stopped
     command: ["postgres", "-c", "max_connections=250"]
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_DB:-school_admission}
+    # Database bootstrap credentials live in backend/.env — one file to rotate.
+    env_file:
+      - ./backend/.env
     volumes:
       - db-data:/var/lib/postgresql
     # Port 5432 is internal within Docker network (uncomment ports to inspect from host)
@@ -37,13 +36,9 @@ services:
           path: ./backend/src
         - action: rebuild
           path: ./backend/SchoolAdmission.sln
-    environment:
-      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
-      ASPNETCORE_HTTP_PORTS: "8080"
-      ConnectionStrings__Default: "Host=db;Port=5432;Database=${POSTGRES_DB:-school_admission};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-postgres};Include Error Detail=true;"
-      HOLD_DURATION_SECONDS: ${HOLD_DURATION_SECONDS:-600}
-      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-true}
-      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000}
+    # Backend configuration: database connection, hold duration, CORS origins.
+    env_file:
+      - ./backend/.env
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8080/health/ready > /dev/null || exit 1"]
       interval: 5s
@@ -75,8 +70,9 @@ services:
           target: /app/index.html
         - action: rebuild
           path: ./frontend/package.json
-    environment:
-      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8080}
+    # Frontend configuration: the backend URL the browser should call.
+    env_file:
+      - ./frontend/.env
 
   backend-tests:
     profiles: ["test"]
@@ -87,9 +83,13 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    env_file:
+      - ./backend/.env
     environment:
-      ConnectionStrings__Default: "Host=db;Port=5432;Database=${POSTGRES_DB:-school_admission};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-postgres};Include Error Detail=true;Maximum Pool Size=60;Timeout=60;Command Timeout=60;"
+      # The suite needs a stable hold duration; the in-process test host
+      # overrides it again (ExpiryTestApiFactory uses 2s).
       HOLD_DURATION_SECONDS: "600"
+      SEED_DEMO_DATA: "false"
       ASPNETCORE_ENVIRONMENT: Development
 
 volumes:

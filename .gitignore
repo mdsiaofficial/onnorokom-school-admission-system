@@ -14,6 +14,12 @@ dist-ssr/
 .env
 .env.*
 !.env.example
+# The two service env files are tracked on purpose: they hold local-development
+# placeholders only (no real credentials) and they keep `docker compose up`
+# working without a manual setup step. Override a value for a single run with
+# the shell environment, e.g. HOLD_DURATION_SECONDS=30 docker compose up -d.
+!backend/.env
+!frontend/.env
 
 # Databases
 *.db
