@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
+using SchoolAdmission.Api.Application.Options;
 using SchoolAdmission.Api.Application.Services;
 using SchoolAdmission.Api.Endpoints;
 using SchoolAdmission.Api.Infrastructure.Background;
@@ -23,12 +24,22 @@ builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
 });
 
-// 3. CORS
+// 3. CORS — only the origins listed in CORS_ALLOWED_ORIGINS (comma-separated) may call the API
+var allowedOrigins = (builder.Configuration["CORS_ALLOWED_ORIGINS"] ?? string.Empty)
+    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+    .Distinct(StringComparer.OrdinalIgnoreCase)
+    .ToArray();
+
+if (allowedOrigins.Length == 0)
+{
+    allowedOrigins = ["http://localhost:3000"];
+}
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.SetIsOriginAllowed(_ => true)
+        policy.WithOrigins(allowedOrigins)
               .AllowAnyHeader()
               .AllowAnyMethod()
               .WithExposedHeaders("Date");
@@ -48,6 +59,29 @@ builder.Services.AddDbContext<AppDbContext>((sp, options) =>
 // 5. Validation
 builder.Services.AddValidatorsFromAssemblyContaining<CreateClassRequestValidator>();
 
+// 5b. Options — validated on start so a bad HOLD_DURATION_SECONDS fails fast instead of at request time
+builder.Services
+    .AddOptions<HoldOptions>()
+    .Configure<IConfiguration>((options, configuration) =>
+    {
+        var raw = configuration[HoldOptions.ConfigKey];
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            options.DurationSeconds = HoldOptions.DefaultDurationSeconds;
+            return;
+        }
+
+        if (!int.TryParse(raw, out var seconds))
+        {
+            throw new InvalidOperationException(
+                $"{HoldOptions.ConfigKey} must be an integer number of seconds, but was '{raw}'.");
+        }
+
+        options.DurationSeconds = seconds;
+    })
+    .Validate(o => o.DurationSeconds > 0, $"{HoldOptions.ConfigKey} must be greater than zero.")
+    .ValidateOnStart();
+
 // 6. Application Services
 builder.Services.AddScoped<IClassService, ClassService>();
 builder.Services.AddScoped<IHoldService, HoldService>();
@@ -60,6 +94,8 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
+
+app.Logger.LogInformation("CORS allowed origins: {Origins}", string.Join(", ", allowedOrigins));
 
 // 9. Startup Migrations and Demo Data Seeder
 if (!app.Environment.IsEnvironment("Testing"))

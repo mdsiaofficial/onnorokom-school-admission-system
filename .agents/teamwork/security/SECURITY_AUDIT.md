@@ -178,7 +178,7 @@ The threat model was constructed around the high-concurrency admission rush hour
 - **Vulnerability Scenario**: A client manipulates payload parameters to set an arbitrary hold duration (e.g. 1 year).
 - **Defensive Mechanism in Codebase**:
   - The client provides no duration parameter in `POST /classes/{id}/holds`.
-  - Duration is read strictly from backend server environment variable `HOLD_DURATION_SECONDS` (default 600s), sanitized with a positive integer boundary check (`if (holdDurationSeconds <= 0) holdDurationSeconds = 600;`).
+  - Duration is read strictly from backend server environment variable `HOLD_DURATION_SECONDS` (default 600s), bound to `HoldOptions` and validated at startup (`Validate(o => o.DurationSeconds > 0)` + `ValidateOnStart()`). A non-numeric or non-positive value now terminates the process at boot with an explicit message instead of being silently coerced.
 - **Audit Result**: **PASS**.
 
 ---

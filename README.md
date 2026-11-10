@@ -4,6 +4,8 @@ A robust, high-concurrency School Admission System built with **.NET 10 (LTS)**,
 
 Designed for first-come, first-served admission rush hours with strict concurrency guarantees: **no seat overselling under any load**, dynamic seat expiry, and multi-process safety.
 
+> **Technology reference:** see [`TECH_STACK.md`](TECH_STACK.md) for every library used and the reasoning behind each choice.
+
 ---
 
 ## 1. Quick Start (One Command)
@@ -79,8 +81,14 @@ docker compose down -v
 You can run the automated xUnit integration and concurrency test suite inside a dedicated Docker container against the real PostgreSQL service:
 
 ```bash
+# The test image is a separate Docker stage, so rebuild it after changing backend code:
+docker compose --profile test build backend-tests
 docker compose --profile test run --rm backend-tests
 ```
+
+> `docker compose up --build` only rebuilds the `backend` service. The `backend-tests` service
+> targets the `test-runner` stage of the same Dockerfile and must be rebuilt explicitly,
+> otherwise you will run the previously compiled test assembly.
 
 ### 4.2 Running Tests Locally (Developers)
 If you have .NET 10 SDK and PostgreSQL installed locally:
@@ -142,10 +150,14 @@ Default values are pre-configured in `docker-compose.yml`. You can copy `.env.ex
 | `POSTGRES_USER` | `postgres` | Database superuser |
 | `POSTGRES_PASSWORD` | `postgres` | Database password |
 | `POSTGRES_DB` | `school_admission` | Database name |
-| `HOLD_DURATION_SECONDS` | `600` | Seat hold duration (10 minutes) |
+| `HOLD_DURATION_SECONDS` | `600` | Seat hold duration (10 minutes). Must be a positive integer — the API refuses to start otherwise. |
 | `SEED_DEMO_DATA` | `true` | Seed 12 standard classes on clean DB |
-| `CORS_ALLOWED_ORIGINS` | `http://localhost:3000` | Allowed browser origins |
+| `CORS_ALLOWED_ORIGINS` | `http://localhost:3000` | Allowed browser origins (comma-separated). Requests from any other origin are rejected. |
 | `VITE_API_BASE_URL` | `http://localhost:8080` | Backend API URL reachable by browser |
+
+> `.env` is read by Docker Compose, not by the app — after editing it, recreate the container
+> (`docker compose up -d --force-recreate backend`); a plain `restart` keeps the old values.
+> See [`TECH_STACK.md`](TECH_STACK.md) for the full configuration precedence chain.
 
 ---
 

@@ -1,7 +1,9 @@
 using System.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.Options;
 using Npgsql;
+using SchoolAdmission.Api.Application.Options;
 using SchoolAdmission.Api.Contracts.Responses;
 using SchoolAdmission.Api.Domain.Entities;
 using SchoolAdmission.Api.Domain.Enums;
@@ -13,16 +15,16 @@ namespace SchoolAdmission.Api.Application.Services;
 public class HoldService : IHoldService
 {
     private readonly AppDbContext _context;
-    private readonly IConfiguration _configuration;
+    private readonly IOptions<HoldOptions> _holdOptions;
     private readonly ILogger<HoldService> _logger;
 
     public HoldService(
         AppDbContext context,
-        IConfiguration configuration,
+        IOptions<HoldOptions> holdOptions,
         ILogger<HoldService> logger)
     {
         _context = context;
-        _configuration = configuration;
+        _holdOptions = holdOptions;
         _logger = logger;
     }
 
@@ -127,8 +129,7 @@ public class HoldService : IHoldService
         }
 
         // 5. Insert new HELD hold
-        var holdDurationSeconds = _configuration.GetValue("HOLD_DURATION_SECONDS", 600);
-        if (holdDurationSeconds <= 0) holdDurationSeconds = 600;
+        var holdDurationSeconds = _holdOptions.Value.DurationSeconds;
         var expiresAt = now.AddSeconds(holdDurationSeconds);
         var holdId = Guid.CreateVersion7();
 
