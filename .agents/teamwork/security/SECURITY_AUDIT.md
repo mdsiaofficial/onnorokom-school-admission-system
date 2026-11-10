@@ -17,7 +17,7 @@ A comprehensive security review and architectural vulnerability assessment was c
 The system demonstrates exceptional defensive engineering principles:
 - **Zero SQL Injection**: 100% of dynamic queries in `HoldService`, `ClassService`, `DatabaseMigrator`, and `ExpirySweeper` utilize strictly parameterized `NpgsqlParameter` queries or compiled LINQ EF Core expressions. Zero string interpolation or raw concatenation exists.
 - **Robust Concurrency Control**: Strict serialization of all seat-affecting transactions at the PostgreSQL database level via row-level locks (`SELECT ... FOR UPDATE`), combined with single-source database clock authority (`clock_timestamp()`). Time-of-Check to Time-of-Use (TOCTOU) race conditions, clock drift exploits, and seat overselling are structurally impossible.
-- **Double-Spending Prevention**: Enforced across three layers: application pre-lock cleanup, active seat filtering, and a PostgreSQL partial unique index (`ux_holds_active_student_class`).
+- **Double-Spending Prevention**: Enforced across three layers: application pre-lock cleanup, active seat filtering, and a PostgreSQL partial unique index (`ux_holds_active_student`).
 - **Input Sanitization**: Strict 17-digit numeric regex `^[0-9]{17}$` is enforced on `X-Student-Id` at the frontend input handler, Axios request interceptor, backend endpoint validation filter, and PostgreSQL check constraint.
 - **Information Disclosure Protection**: Centralized RFC 9457 `ProblemDetailsExceptionHandler` suppresses internal stack traces, database schema specifics, and server file paths, returning standard problem details with machine-readable error codes.
 - **Confidentiality Compliance**: Sensitive assignment briefs, private recruitment files, local environment variables, and database state are strictly excluded from version control via `.gitignore`.
@@ -146,15 +146,17 @@ The threat model was constructed around the high-concurrency admission rush hour
 - **Audit Result**: **PASS**.
 
 ### 5.3 Double-Spending & Duplicate Holds per Student
-- **Requirement**: A student can have at most one active `HELD` (unexpired) or `CONFIRMED` hold per class.
+- **Requirement**: A student can have at most one active `HELD` (unexpired) or `CONFIRMED` hold.
+  The brief phrases this per class ("একটি class-এ"); the implementation applies it **per student
+  across the whole system** — stricter than the brief. See `ASSUMPTIONS.md` §2 for the rationale.
 - **Defensive Mechanism in Codebase**:
   1. **Application-level check**:
      - Pre-lock cleanup marks stale `HELD` rows for that student as `EXPIRED`.
      - Queries existing holds: `status = 'CONFIRMED' OR (status = 'HELD' AND expires_at > @now)`. If found, throws HTTP 409 `ALREADY_CONFIRMED` or `ALREADY_HELD`.
   2. **Database-level Partial Unique Index**:
      ```sql
-     CREATE UNIQUE INDEX ux_holds_active_student_class 
-     ON holds (student_id, class_id) 
+     CREATE UNIQUE INDEX ux_holds_active_student
+     ON holds (student_id)
      WHERE status IN ('HELD', 'CONFIRMED');
      ```
   3. If a simultaneous race bypasses the query check, the PostgreSQL index engine rejects the second transaction with a unique violation (`23505`), which `HoldService` catches and maps to HTTP 409 `ALREADY_HELD`.

@@ -80,5 +80,13 @@ public class ConcurrencyIdempotentConfirmTests : IClassFixture<SchoolAdmissionAp
         var finalHoldStatus = await finalHoldCheck.ReadJsonAsync<HoldStatusResponse>();
         Assert.NotNull(finalHoldStatus);
         Assert.Equal("CONFIRMED", finalHoldStatus.Status);
+
+        Console.WriteLine("\n================================================================================");
+        Console.WriteLine(" [CONCURRENCY TEST RESULT: IDEMPOTENT PAYMENT CONFIRMATION]");
+        Console.WriteLine($" Simultaneous Confirmations Sent : {concurrentConfirms} parallel requests");
+        Console.WriteLine($" Successful Confirmations (200) : {responses.Length} requests");
+        Console.WriteLine($" Total Confirmed Seats Added     : {summary.ConfirmedSeats} (Exactly 1, no duplicate counting)");
+        Console.WriteLine(" Invariant Verified              : PASSED (Idempotency under race conditions)");
+        Console.WriteLine("================================================================================\n");
     }
 }

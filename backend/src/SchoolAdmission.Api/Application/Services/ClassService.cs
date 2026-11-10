@@ -46,6 +46,86 @@ public class ClassService : IClassService
             classEntity.TotalSeats);
     }
 
+    public async Task<ClassSummaryResponse> UpdateClassAsync(Guid classId, UpdateClassRequest request, CancellationToken cancellationToken = default)
+    {
+        var trimmedName = request.Name?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(trimmedName) || trimmedName.Length > 120 || request.TotalSeats <= 0)
+        {
+            throw ProblemException.BadRequest("INVALID_CLASS_DATA", "Name must be 1-120 characters and totalSeats must be greater than 0.");
+        }
+
+        var classEntity = await _context.Classes
+            .Include(c => c.Holds)
+            .FirstOrDefaultAsync(c => c.Id == classId, cancellationToken);
+
+        if (classEntity == null)
+        {
+            throw ProblemException.NotFound("CLASS_NOT_FOUND", $"Class with ID '{classId}' was not found.");
+        }
+
+        var now = DateTimeOffset.UtcNow;
+        var heldSeats = classEntity.Holds.Count(h => h.Status == HoldStatus.HELD && h.ExpiresAt > now);
+        var confirmedSeats = classEntity.Holds.Count(h => h.Status == HoldStatus.CONFIRMED);
+        var committedSeats = heldSeats + confirmedSeats;
+
+        if (request.TotalSeats < committedSeats)
+        {
+            throw ProblemException.Conflict(
+                "SEATS_BELOW_OCCUPANCY",
+                $"Cannot reduce total seats to {request.TotalSeats} because {committedSeats} seats are already held or confirmed ({heldSeats} held, {confirmedSeats} confirmed).");
+        }
+
+        classEntity.Name = trimmedName;
+        classEntity.TotalSeats = request.TotalSeats;
+
+        await _context.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation("Updated class {ClassId} ({Name}) to {TotalSeats} seats.", classEntity.Id, classEntity.Name, classEntity.TotalSeats);
+
+        return new ClassSummaryResponse(
+            classEntity.Id.ToString(),
+            classEntity.Name,
+            classEntity.TotalSeats,
+            heldSeats,
+            confirmedSeats,
+            Math.Max(0, classEntity.TotalSeats - committedSeats));
+    }
+
+    public async Task DeleteClassAsync(Guid classId, CancellationToken cancellationToken = default)
+    {
+        var classEntity = await _context.Classes
+            .Include(c => c.Holds)
+            .FirstOrDefaultAsync(c => c.Id == classId, cancellationToken);
+
+        if (classEntity == null)
+        {
+            throw ProblemException.NotFound("CLASS_NOT_FOUND", $"Class with ID '{classId}' was not found.");
+        }
+
+        var now = DateTimeOffset.UtcNow;
+        var hasActiveHolds = classEntity.Holds.Any(h =>
+            h.Status == HoldStatus.CONFIRMED ||
+            (h.Status == HoldStatus.HELD && h.ExpiresAt > now));
+
+        if (hasActiveHolds)
+        {
+            throw ProblemException.Conflict(
+                "CANNOT_DELETE_ACTIVE_CLASS",
+                "Cannot delete a class that has active holds or confirmed student admissions. Please cancel applications first.");
+        }
+
+        // Remove historical expired/cancelled holds if any before deleting class due to FK restrict
+        if (classEntity.Holds.Count > 0)
+        {
+            _context.Holds.RemoveRange(classEntity.Holds);
+        }
+
+        _context.Classes.Remove(classEntity);
+        await _context.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation("Deleted class {ClassId} ({Name}).", classEntity.Id, classEntity.Name);
+    }
+
     public async Task<IReadOnlyList<ClassSummaryResponse>> GetClassesAsync(CancellationToken cancellationToken = default)
     {
         var now = DateTimeOffset.UtcNow;

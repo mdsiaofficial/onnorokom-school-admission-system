@@ -25,9 +25,15 @@ public class DemoDataSeeder
 
     public static async Task SeedAsync(AppDbContext context, ILogger logger, CancellationToken cancellationToken = default)
     {
-        logger.LogInformation("Resetting and re-seeding demo classes and holds for startup...");
+        // Seeding must be idempotent: a restart (or `docker compose down` + `up`) must never
+        // destroy real data, so demo rows are only written when the database is still empty.
+        if (await context.Classes.AnyAsync(cancellationToken))
+        {
+            logger.LogInformation("Existing classes found; skipping demo data seeding to preserve current data.");
+            return;
+        }
 
-        await context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE holds, classes CASCADE;", cancellationToken);
+        logger.LogInformation("Seeding demo classes and holds into an empty database...");
 
         var now = DateTimeOffset.UtcNow;
         long studentRunningId = 1;

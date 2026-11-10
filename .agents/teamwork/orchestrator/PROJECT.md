@@ -60,7 +60,7 @@
 |  - Classes (id, name, total_seats, created_at)            |
 |  - Holds (id, class_id, student_id, status, expires_at,   |
 |           confirmed_at, cancelled_at, updated_at)         |
-|  - Partial Unique Index: (student_id, class_id)           |
+|  - Partial Unique Index: (student_id)                    |
 |    WHERE status IN ('HELD', 'CONFIRMED')                  |
 +-----------------------------+-----------------------------+
 ```

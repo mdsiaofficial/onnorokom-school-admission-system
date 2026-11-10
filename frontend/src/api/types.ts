@@ -14,6 +14,11 @@ export interface CreateClassRequest {
   totalSeats: number;
 }
 
+export interface UpdateClassRequest {
+  name: string;
+  totalSeats: number;
+}
+
 export interface HoldResponse {
   holdId: string;
   classId: string;

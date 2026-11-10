@@ -1,7 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useClassesQuery, useMyHoldsQuery, useApplySeatMutation } from '@/api/queries';
+import {
+  useClassesQuery,
+  useMyHoldsQuery,
+  useApplySeatMutation,
+  useUpdateClassMutation,
+  useDeleteClassMutation,
+} from '@/api/queries';
 import { useStudentStore } from '@/stores/studentStore';
 import { useLanguageStore } from '@/stores/languageStore';
 import { useAuthStore } from '@/stores/authStore';
@@ -9,6 +15,8 @@ import { formatDhakaTime, formatNumber } from '@/utils/formatters';
 import { getLocalizedErrorMessage } from '@/utils/errors';
 import { toast } from '@/components/ToastContainer';
 import { TableSkeleton, CardSkeleton } from '@/components/LoadingSkeleton';
+import { Modal } from '@/components/Modal';
+import { ClassSummary } from '@/api/types';
 import {
   Users,
   Clock,
@@ -17,6 +25,8 @@ import {
   ArrowRight,
   Search,
   RefreshCw,
+  Edit2,
+  Trash2,
 } from 'lucide-react';
 
 export const ClassListPage: React.FC = () => {
@@ -39,6 +49,63 @@ export const ClassListPage: React.FC = () => {
 
   const { data: myHolds } = useMyHoldsQuery();
   const applyMutation = useApplySeatMutation();
+  const updateMutation = useUpdateClassMutation();
+  const deleteMutation = useDeleteClassMutation();
+
+  // State for Edit Modal & Delete Confirm Modal
+  const [editingClass, setEditingClass] = useState<ClassSummary | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editSeats, setEditSeats] = useState('');
+  const [editError, setEditError] = useState('');
+
+  const [deletingClass, setDeletingClass] = useState<ClassSummary | null>(null);
+
+  const openEditModal = (cls: ClassSummary) => {
+    setEditingClass(cls);
+    setEditName(cls.name);
+    setEditSeats(cls.totalSeats.toString());
+    setEditError('');
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingClass) return;
+
+    const trimmed = editName.trim();
+    const seatsNum = parseInt(editSeats, 10);
+    if (!trimmed || trimmed.length > 120) {
+      setEditError(language === 'bn' ? 'নাম 1-120 অক্ষরের মধ্যে হতে হবে।' : 'Name must be 1-120 characters.');
+      return;
+    }
+    if (Number.isNaN(seatsNum) || seatsNum <= 0) {
+      setEditError(language === 'bn' ? 'আসন সংখ্যা কমপক্ষে 1 হতে হবে।' : 'Total seats must be at least 1.');
+      return;
+    }
+
+    try {
+      await updateMutation.mutateAsync({
+        classId: editingClass.id,
+        data: { name: trimmed, totalSeats: seatsNum },
+      });
+      toast.success(language === 'bn' ? 'ক্লাসের তথ্য সফলভাবে আপডেট করা হয়েছে।' : 'Class updated successfully.');
+      setEditingClass(null);
+    } catch (err) {
+      const msg = getLocalizedErrorMessage(err);
+      setEditError(msg);
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletingClass) return;
+    try {
+      await deleteMutation.mutateAsync(deletingClass.id);
+      toast.success(language === 'bn' ? 'ক্লাস সফলভাবে মুছে ফেলা হয়েছে।' : 'Class deleted successfully.');
+      setDeletingClass(null);
+    } catch (err) {
+      const msg = getLocalizedErrorMessage(err);
+      toast.error(msg);
+    }
+  };
 
   // Keep track of refetch time
   React.useEffect(() => {
@@ -220,14 +287,12 @@ export const ClassListPage: React.FC = () => {
                   >
                     {t('classes.table.available')}
                   </th>
-                  {!isTeacher && (
-                    <th
-                      scope="col"
-                      className="py-3.5 pl-3 pr-6 text-right text-xs font-bold text-slate-600 uppercase tracking-wider"
-                    >
-                      {t('classes.table.action')}
-                    </th>
-                  )}
+                  <th
+                    scope="col"
+                    className="py-3.5 pl-3 pr-6 text-right text-xs font-bold text-slate-600 uppercase tracking-wider"
+                  >
+                    {isTeacher ? (language === 'bn' ? 'ম্যানেজ করুন' : 'Manage') : t('classes.table.action')}
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white">
@@ -294,8 +359,27 @@ export const ClassListPage: React.FC = () => {
                           {formatNumber(cls.availableSeats)}
                         </span>
                       </td>
-                      {!isTeacher && (
-                        <td className="py-4 pl-3 pr-6 text-right whitespace-nowrap">
+                      <td className="py-4 pl-3 pr-6 text-right whitespace-nowrap">
+                        {isTeacher ? (
+                          <div className="inline-flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => openEditModal(cls)}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 transition shadow-sm"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                              <span>{language === 'bn' ? 'সম্পাদনা' : 'Edit'}</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setDeletingClass(cls)}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 transition shadow-sm"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>{language === 'bn' ? 'মুছুন' : 'Delete'}</span>
+                            </button>
+                          </div>
+                        ) : (
                           <div className="inline-flex flex-col items-end">
                             <button
                               type="button"
@@ -326,8 +410,8 @@ export const ClassListPage: React.FC = () => {
                               </span>
                             )}
                           </div>
-                        </td>
-                      )}
+                        )}
+                      </td>
                     </tr>
                   );
                 })}
@@ -411,7 +495,26 @@ export const ClassListPage: React.FC = () => {
                     </div>
                   </div>
 
-                  {!isTeacher && (
+                  {isTeacher ? (
+                    <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
+                      <button
+                        type="button"
+                        onClick={() => openEditModal(cls)}
+                        className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-semibold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 transition"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                        <span>{language === 'bn' ? 'সম্পাদনা' : 'Edit'}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDeletingClass(cls)}
+                        className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-semibold bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 transition"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>{language === 'bn' ? 'মুছুন' : 'Delete'}</span>
+                      </button>
+                    </div>
+                  ) : (
                     <button
                       type="button"
                       disabled={isDisabled}
@@ -446,6 +549,113 @@ export const ClassListPage: React.FC = () => {
             })}
           </div>
         </>
+      )}
+
+      {/* Teacher Edit Class Modal */}
+      {editingClass && (
+        <Modal
+          isOpen={Boolean(editingClass)}
+          onClose={() => setEditingClass(null)}
+          title={language === 'bn' ? 'ক্লাসের তথ্য সম্পাদনা' : 'Edit Class Details'}
+        >
+          <form onSubmit={handleSaveEdit} className="space-y-4">
+            {editError && (
+              <div className="p-3 text-xs bg-rose-50 border border-rose-200 text-rose-700 rounded-xl">
+                {editError}
+              </div>
+            )}
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                {language === 'bn' ? 'ক্লাসের নাম ও শিফট' : 'Class Name & Shift'}
+              </label>
+              <input
+                type="text"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                maxLength={120}
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                {language === 'bn' ? 'মোট আসন সংখ্যা' : 'Total Seats'}
+              </label>
+              <input
+                type="number"
+                min={editingClass.heldSeats + editingClass.confirmedSeats}
+                value={editSeats}
+                onChange={(e) => setEditSeats(e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                required
+              />
+              <p className="text-[11px] text-slate-500 mt-1">
+                {language === 'bn'
+                  ? `বর্তমানে ${formatNumber(editingClass.heldSeats + editingClass.confirmedSeats)} টি আসন দখলকৃত (${formatNumber(editingClass.heldSeats)} আবেদন + ${formatNumber(editingClass.confirmedSeats)} নিশ্চিত)।`
+                  : `Currently ${editingClass.heldSeats + editingClass.confirmedSeats} seats committed (${editingClass.heldSeats} held + ${editingClass.confirmedSeats} confirmed).`}
+              </p>
+            </div>
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setEditingClass(null)}
+                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 rounded-xl"
+              >
+                {language === 'bn' ? 'বাতিল' : 'Cancel'}
+              </button>
+              <button
+                type="submit"
+                disabled={updateMutation.isPending}
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-sm transition disabled:opacity-50"
+              >
+                {updateMutation.isPending && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
+                <span>{language === 'bn' ? 'সংরক্ষণ করুন' : 'Save Changes'}</span>
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* Teacher Delete Class Confirm Modal */}
+      {deletingClass && (
+        <Modal
+          isOpen={Boolean(deletingClass)}
+          onClose={() => setDeletingClass(null)}
+          title={language === 'bn' ? 'ক্লাস মুছে ফেলার নিশ্চিতকরণ' : 'Confirm Class Deletion'}
+        >
+          <div className="space-y-4">
+            <p className="text-sm text-slate-600">
+              {language === 'bn'
+                ? `আপনি কি নিশ্চিত যে '${deletingClass.name}' ক্লাসটি মুছে ফেলতে চান?`
+                : `Are you sure you want to delete '${deletingClass.name}'?`}
+            </p>
+            {deletingClass.heldSeats + deletingClass.confirmedSeats > 0 && (
+              <div className="p-3 text-xs bg-amber-50 border border-amber-200 text-amber-800 rounded-xl">
+                {language === 'bn'
+                  ? 'সতর্কতা: এই ক্লাসে সক্রিয় আবেদন বা নিশ্চিত শিক্ষার্থী রয়েছে। চলমান আবেদন শেষ না হওয়া পর্যন্ত এটি মুছে ফেলা যাবে না।'
+                  : 'Warning: This class has active holds or confirmed students and cannot be deleted until they are resolved.'}
+              </div>
+            )}
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setDeletingClass(null)}
+                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 rounded-xl"
+              >
+                {language === 'bn' ? 'বাতিল' : 'Cancel'}
+              </button>
+              <button
+                type="button"
+                disabled={deleteMutation.isPending}
+                onClick={handleConfirmDelete}
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white rounded-xl shadow-sm transition disabled:opacity-50"
+              >
+                {deleteMutation.isPending && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
+                <span>{language === 'bn' ? 'হ্যাঁ, মুছুন' : 'Yes, Delete'}</span>
+              </button>
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );

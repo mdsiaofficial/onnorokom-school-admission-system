@@ -52,8 +52,7 @@ builder.Services.AddDbContext<AppDbContext>((sp, options) =>
     var config = sp.GetRequiredService<IConfiguration>();
     var connectionString = config.GetConnectionString("Default");
     options.UseNpgsql(connectionString)
-           .UseSnakeCaseNamingConvention()
-           .ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
+           .UseSnakeCaseNamingConvention();
 });
 
 // 5. Validation

@@ -24,6 +24,16 @@ public static class TestClientHelper
         return await client.PostAsJsonAsync("/classes", new CreateClassRequest(name, totalSeats), JsonOptions);
     }
 
+    public static async Task<HttpResponseMessage> PutUpdateClassAsync(this HttpClient client, string classId, string name, int totalSeats)
+    {
+        return await client.PutAsJsonAsync($"/classes/{classId}", new UpdateClassRequest(name, totalSeats), JsonOptions);
+    }
+
+    public static async Task<HttpResponseMessage> DeleteClassAsync(this HttpClient client, string classId)
+    {
+        return await client.DeleteAsync($"/classes/{classId}");
+    }
+
     public static async Task<HttpResponseMessage> GetClassesAsync(this HttpClient client)
     {
         return await client.GetAsync("/classes");

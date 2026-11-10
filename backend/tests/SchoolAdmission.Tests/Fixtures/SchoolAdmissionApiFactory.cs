@@ -53,9 +53,9 @@ public class SchoolAdmissionApiFactory : WebApplicationFactory<Program>
     {
         var builder = new Npgsql.NpgsqlConnectionStringBuilder(connectionString)
         {
-            MaxPoolSize = 60,
-            Timeout = 60,
-            CommandTimeout = 60
+            MaxPoolSize = 100,
+            Timeout = 120,
+            CommandTimeout = 120
         };
         return builder.ConnectionString;
     }

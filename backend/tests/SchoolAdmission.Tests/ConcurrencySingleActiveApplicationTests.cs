@@ -49,6 +49,14 @@ public class ConcurrencySingleActiveApplicationTests : IClassFixture<SchoolAdmis
         Assert.Equal(29, conflictCount);
         Assert.Equal(0, otherCount);
 
+        Console.WriteLine("\n================================================================================");
+        Console.WriteLine(" [CONCURRENCY TEST RESULT: SINGLE APPLICATION PER STUDENT]");
+        Console.WriteLine($" Simultaneous Requests from Same ID : {parallelRequests} parallel requests");
+        Console.WriteLine($" Granted Application (Hold)         : {createdCount} request (HTTP 201 Created)");
+        Console.WriteLine($" Blocked Duplicate Attempts         : {conflictCount} requests (HTTP 409 Conflict)");
+        Console.WriteLine(" Invariant Verified                 : PASSED (No duplicate holds for same student)");
+        Console.WriteLine("================================================================================\n");
+
         // 4. Verify class seat breakdown
         var classGet = await _client.GetClassByIdAsync(classId);
         Assert.Equal(HttpStatusCode.OK, classGet.StatusCode);

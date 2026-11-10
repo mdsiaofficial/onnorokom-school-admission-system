@@ -115,6 +115,8 @@
     "NOT_HOLD_OWNER": "You are not authorized to modify this application.",
     "HOLD_NOT_FOUND": "Application not found.",
     "CLASS_NOT_FOUND": "Class not found.",
+    "SEATS_BELOW_OCCUPANCY": "Cannot reduce seats below the number of currently held or confirmed seats.",
+    "CANNOT_DELETE_ACTIVE_CLASS": "Cannot delete class with active holds or confirmed student admissions.",
     "INVALID_STUDENT_ID": "Birth registration number must be exactly 17 digits.",
     "NETWORK_ERROR": "Unable to connect to the server. Please try again later.",
     "TIMEOUT": "Request timed out. Please try again.",

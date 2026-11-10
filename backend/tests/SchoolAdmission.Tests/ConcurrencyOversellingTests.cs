@@ -15,7 +15,7 @@ public class ConcurrencyOversellingTests : IClassFixture<SchoolAdmissionApiFacto
     }
 
     [Fact]
-    public async Task Concurrency_NoOverselling_200ConcurrentRequests_For20Seats_Exactly20Succeed_180Conflict()
+    public async Task Concurrency_NoOverselling_1000ConcurrentRequests_For20Seats_Exactly20Succeed_980Conflict()
     {
         // 1. Arrange: Create a class with exactly 20 seats
         var uniqueClassName = $"Concurrency-20Seats-{Guid.NewGuid():N}";
@@ -36,15 +36,15 @@ public class ConcurrencyOversellingTests : IClassFixture<SchoolAdmissionApiFacto
         Assert.Equal(0, initialSummary.ConfirmedSeats);
         Assert.Equal(20, initialSummary.AvailableSeats);
 
-        // 2. Prepare 200 distinct 17-digit student IDs
+        // 2. Prepare 1000 distinct 17-digit student IDs
         // Format: "100" + 14-digit sequential index = exactly 17 digits
-        const int totalRequests = 200;
+        const int totalRequests = 1000;
         var studentIds = Enumerable.Range(1, totalRequests)
             .Select(i => $"100{i:D14}")
             .ToList();
 
-        // 3. Act: Send 200 concurrent POST /classes/{id}/holds requests
-        // Use a barrier/Task.WhenAll to trigger concurrency simultaneously
+        // 3. Act: Send 1000 concurrent POST /classes/{id}/holds requests
+        // Use Task.WhenAll to trigger concurrency simultaneously
         var tasks = studentIds.Select(async studentId =>
         {
             await Task.Yield();
@@ -53,7 +53,7 @@ public class ConcurrencyOversellingTests : IClassFixture<SchoolAdmissionApiFacto
 
         var responses = await Task.WhenAll(tasks);
 
-        // 4. Assert: Exactly 20 return 201 Created, 180 return 409 Conflict
+        // 4. Assert: Exactly 20 return 201 Created, 980 return 409 Conflict
         var createdCount = responses.Count(r => r.StatusCode == HttpStatusCode.Created);
         var conflictCount = responses.Count(r => r.StatusCode == HttpStatusCode.Conflict);
         var otherResponses = responses.Where(r => r.StatusCode != HttpStatusCode.Created && r.StatusCode != HttpStatusCode.Conflict).ToList();
@@ -66,7 +66,16 @@ public class ConcurrencyOversellingTests : IClassFixture<SchoolAdmissionApiFacto
         }
 
         Assert.Equal(20, createdCount);
-        Assert.Equal(180, conflictCount);
+        Assert.Equal(980, conflictCount);
+
+        Console.WriteLine("\n================================================================================");
+        Console.WriteLine(" [CONCURRENCY TEST RESULT: NO OVERSELLING]");
+        Console.WriteLine($" Total Concurrent Requests Sent : {totalRequests} parallel requests");
+        Console.WriteLine($" Target Class Total Seats       : {initialSummary.TotalSeats} seats");
+        Console.WriteLine($" Successfully Held Seats        : {createdCount} requests (HTTP 201 Created)");
+        Console.WriteLine($" Rejected (Seats Full)          : {conflictCount} requests (HTTP 409 Conflict)");
+        Console.WriteLine($" Oversold Seats                 : 0 (PASSED - Strict capacity invariant held)");
+        Console.WriteLine("================================================================================\n");
 
         // 5. Query GET /classes/{id} to verify aggregate counts
         var finalClassGet = await _client.GetClassByIdAsync(classId);

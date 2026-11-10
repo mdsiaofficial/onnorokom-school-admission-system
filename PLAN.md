@@ -165,7 +165,7 @@ Why this works:
 ### 4.4 Defence in depth (DB-level guards)
 - `CHECK (total_seats > 0)`.
 - `CHECK (student_id ~ '^[0-9]{17}$')`.
-- **Partial unique index** on `(student_id, class_id) WHERE status IN ('HELD','CONFIRMED')` (I2 backstop). To make this compatible with derived expiry, the apply transaction first flips this student's stale-`HELD` rows for that class to `EXPIRED` (inside the lock) before inserting.
+- **Partial unique index** on `(student_id) WHERE status IN ('HELD','CONFIRMED')` (I2 backstop) — one active application per student across the whole system. To make this compatible with derived expiry, the apply transaction first flips this student's stale-`HELD` rows for that class to `EXPIRED` (inside the lock) before inserting.
 - A violation of this index is mapped to the same `409` as the application-level check, so even a logic bug cannot create a duplicate.
 
 ### 4.5 Alternatives considered (to put in ASSUMPTIONS.md)
@@ -214,7 +214,7 @@ Why this works:
 ### 5.3 Indexes
 - `ix_holds_class_status_expires (class_id, status, expires_at)` → seat counting.
 - `ix_holds_student_created (student_id, created_at DESC)` → `/me/holds`.
-- `ux_holds_active_student_class (student_id, class_id) WHERE status IN ('HELD','CONFIRMED')` (unique, partial).
+- `ux_holds_active_student (student_id) WHERE status IN ('HELD','CONFIRMED')` (unique, partial) — enforces one active application per student.
 
 ### 5.4 Seat counts (computed, never stored)
 ```

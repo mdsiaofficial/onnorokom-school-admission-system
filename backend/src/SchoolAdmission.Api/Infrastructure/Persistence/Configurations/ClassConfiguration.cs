@@ -13,7 +13,10 @@ public class ClassConfiguration : IEntityTypeConfiguration<Class>
             t.HasCheckConstraint("ck_classes_total_seats_positive", "total_seats > 0");
         });
 
-        builder.HasKey(c => c.Id);
+        // Names are pinned so the model matches the names created by the initial
+        // migration; the snake-case convention would otherwise rename them to
+        // pk_classes/fk_holds_classes_class_id and produce a bogus pending migration.
+        builder.HasKey(c => c.Id).HasName("PK_classes");
         builder.Property(c => c.Id).HasColumnName("id");
 
         builder.Property(c => c.Name)
@@ -32,6 +35,7 @@ public class ClassConfiguration : IEntityTypeConfiguration<Class>
         builder.HasMany(c => c.Holds)
             .WithOne(h => h.Class)
             .HasForeignKey(h => h.ClassId)
+            .HasConstraintName("FK_holds_classes_class_id")
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

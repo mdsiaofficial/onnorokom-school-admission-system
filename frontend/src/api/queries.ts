@@ -1,8 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getClasses, createClass, applyForSeat } from './classes';
+import { getClasses, createClass, updateClass, deleteClass, applyForSeat } from './classes';
 import { getMyHolds, confirmHold, cancelHold } from './holds';
 import { useStudentStore } from '@/stores/studentStore';
-import { CreateClassRequest } from './types';
+import { CreateClassRequest, UpdateClassRequest } from './types';
 
 export const useClassesQuery = () => {
   return useQuery({
@@ -69,6 +69,29 @@ export const useCreateClassMutation = () => {
 
   return useMutation({
     mutationFn: (data: CreateClassRequest) => createClass(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['classes'] });
+    },
+  });
+};
+
+export const useUpdateClassMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ classId, data }: { classId: string; data: UpdateClassRequest }) =>
+      updateClass(classId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['classes'] });
+    },
+  });
+};
+
+export const useDeleteClassMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (classId: string) => deleteClass(classId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['classes'] });
     },

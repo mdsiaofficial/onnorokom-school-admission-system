@@ -112,6 +112,43 @@ public class ApiContractTests : IClassFixture<SchoolAdmissionApiFactory>
     }
 
     [Fact]
+    public async Task Contract_Endpoint3b_PutUpdateClass_UpdatesClassSuccessfully()
+    {
+        var className = $"Contract-ToUpdate-{Guid.NewGuid():N}";
+        var createResponse = await _client.PostCreateClassAsync(className, 30);
+        var created = await createResponse.ReadJsonAsync<ClassResponse>();
+        Assert.NotNull(created);
+
+        // Update class name and totalSeats
+        var updatedName = $"{className}-Updated";
+        var updateResponse = await _client.PutUpdateClassAsync(created.Id, updatedName, 45);
+        Assert.Equal(HttpStatusCode.OK, updateResponse.StatusCode);
+
+        var updated = await updateResponse.ReadJsonAsync<ClassSummaryResponse>();
+        Assert.NotNull(updated);
+        Assert.Equal(updatedName, updated.Name);
+        Assert.Equal(45, updated.TotalSeats);
+        Assert.Equal(45, updated.AvailableSeats);
+    }
+
+    [Fact]
+    public async Task Contract_Endpoint3c_DeleteClass_DeletesClassSuccessfully()
+    {
+        var className = $"Contract-ToDelete-{Guid.NewGuid():N}";
+        var createResponse = await _client.PostCreateClassAsync(className, 10);
+        var created = await createResponse.ReadJsonAsync<ClassResponse>();
+        Assert.NotNull(created);
+
+        // Delete class
+        var deleteResponse = await _client.DeleteClassAsync(created.Id);
+        Assert.Equal(HttpStatusCode.NoContent, deleteResponse.StatusCode);
+
+        // Verify class no longer exists
+        var getResponse = await _client.GetClassByIdAsync(created.Id);
+        Assert.Equal(HttpStatusCode.NotFound, getResponse.StatusCode);
+    }
+
+    [Fact]
     public async Task Contract_Endpoint4_PostClassHolds_AppliesHoldAndValidatesHeadersAndErrors()
     {
         var createResponse = await _client.PostCreateClassAsync($"Contract-Hold-{Guid.NewGuid():N}", 10);

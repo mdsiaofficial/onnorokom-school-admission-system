@@ -1,35 +1,25 @@
-# School Admission System (অনলাইন স্কুল ভর্তি সিস্টেম)
+# School Admission System
 
-A robust, high-concurrency School Admission System built with **.NET 10 (LTS)**, **PostgreSQL 18**, and **React 19 (TypeScript + Vite)**, fully containerized with **Docker Compose**.
+A containerized, concurrent school seat admission and hold management system built with **.NET 10 Minimal APIs**, **PostgreSQL 18**, and **React 19 (TypeScript + Vite)**.
 
-Designed for first-come, first-served admission rush hours with strict concurrency guarantees: **no seat overselling under any load**, dynamic seat expiry, and multi-process safety.
-
-> **Technology reference:** see [`TECH_STACK.md`](TECH_STACK.md) for every library used and the reasoning behind each choice.
+Designed for first-come, first-served rush hours with strict concurrency guarantees: **zero seat overselling**, dynamic seat expiry, and idempotent payment confirmation.
 
 ---
 
-## 1. Quick Start (One Command)
+## 1. Quick Start
 
-The entire application runs with a single command on any machine with Docker installed. No local .NET, Node.js, or PostgreSQL installations are required, and no manual `.env` setup is needed — each app ships with its own ready-to-edit env file (`backend/.env` and `frontend/.env`).
+Run the complete stack with a single command (no local runtime installations required):
 
 ```bash
-docker compose up --build
+docker compose up --build -d
 ```
 
-Once all services are healthy:
-- **Frontend UI**: [http://localhost:3000](http://localhost:3000)
-- **Backend API**: [http://localhost:8080](http://localhost:8080)
-- **Interactive Swagger Docs**: [http://localhost:8080/swagger](http://localhost:8080/swagger)
-- **Health Checks**:
-  - Liveness: [http://localhost:8080/health/live](http://localhost:8080/health/live)
-  - Readiness: [http://localhost:8080/health/ready](http://localhost:8080/health/ready)
+* **Frontend UI**: [http://localhost:3000](http://localhost:3000)
+* **Backend API**: [http://localhost:8080](http://localhost:8080)
+* **Interactive Swagger Docs**: [http://localhost:8080/swagger](http://localhost:8080/swagger)
+* **Health Readiness**: [http://localhost:8080/health/ready](http://localhost:8080/health/ready)
 
-To run the stack in detached mode:
-```bash
-docker compose up -d --build
-```
-
-To stop all services:
+To stop all containers:
 ```bash
 docker compose down
 ```
@@ -38,169 +28,70 @@ docker compose down
 
 ## 2. Testing the UI
 
-1. Open [http://localhost:3000](http://localhost:3000) in your browser.
-2. In the top navigation bar, enter a **17-digit Student ID** (Birth Registration Number / জন্মনিবন্ধন নম্বর).
-   - Sample IDs:
-     - `20150000000000001`
-     - `20150000000000002`
-     - `20150000000000003`
-3. Browse the **Class List** with live seat counts (total, held, confirmed, and available).
-4. Click **"আবেদন করুন" (Apply)** to hold a seat. A 10-minute hold window starts immediately.
-5. Navigate to **"আমার আবেদন" (My Applications)** to view your hold status and live countdown ticker.
-6. Click **"ভর্তি ফি দিন" (Pay Admission Fee)** to confirm your admission, or **"বাতিল করুন" (Cancel)** to immediately release the held seat.
-7. Switch between **Bangla (বাংলা)** and **English** using the language toggle in the header.
+1. Open [http://localhost:3000](http://localhost:3000).
+2. Enter a **17-digit Birth Registration Number** (e.g. `20150000000000001`).
+3. Browse the live class list with real-time seat status counts (Total, Held, Confirmed, Available).
+4. Click **Apply (আবেদন করুন)** to hold a seat for 10 minutes.
+5. In **My Applications (আমার আবেদন)**, click **Pay Admission Fee** to confirm or **Cancel** to immediately return the seat.
+6. Use the **Teacher Login (Demo)** button in the navbar to test administrative class creation.
 
 ---
 
-## 3. Data Persistence Across Restarts
+## 3. Automated Concurrency & Integration Tests
 
-All database records, admissions, and holds are stored in a Docker named volume (`school_admission_db_data`).
-
-Verify data persistence across restarts:
+### Run Tests via Docker
 ```bash
-# 1. Stop containers
-docker compose down
-
-# 2. Restart containers
-docker compose up -d
-
-# 3. Check http://localhost:8080/classes or http://localhost:3000
-# All classes, holds, and confirmed admissions remain intact!
-```
-
-To wipe the database volume and re-seed from scratch:
-```bash
-docker compose down -v
-```
-
----
-
-## 4. Automated Tests
-
-### 4.1 Running Automated Tests via Docker (Recommended)
-You can run the automated xUnit integration and concurrency test suite inside a dedicated Docker container against the real PostgreSQL service:
-
-```bash
-# The test image is a separate Docker stage, so rebuild it after changing backend code:
 docker compose --profile test build backend-tests
 docker compose --profile test run --rm backend-tests
 ```
+*(Or run `./scripts/test-e2e.sh`)*
 
-> `docker compose up --build` only rebuilds the `backend` service. The `backend-tests` service
-> targets the `test-runner` stage of the same Dockerfile and must be rebuilt explicitly,
-> otherwise you will run the previously compiled test assembly.
-
-### 4.2 Running Tests Locally (Developers)
-If you have .NET 10 SDK and PostgreSQL installed locally:
+### Run Tests Locally
 ```bash
-dotnet test backend/SchoolAdmission.sln --logger:console;verbosity=normal
+dotnet test backend/SchoolAdmission.sln --logger:"console;verbosity=normal"
 ```
 
-### 4.3 What the Automated Tests Cover
-1. **Concurrency — No Overselling**: 200 parallel requests compete for 20 seats; exactly 20 succeed with `201 Created` and 180 receive `409 Conflict`. Zero overselling.
-2. **Concurrency — One Active Application per Student**: 30 simultaneous requests for the same student on one class; exactly one succeeds, 29 fail with `409 Conflict`.
-3. **Concurrency — Idempotent Confirmation**: 20 concurrent confirm calls for the same hold; all return `200 OK CONFIRMED`, and `confirmedSeats` increments by exactly 1.
-4. **Dynamic Expiry**: Applies for a seat with a short hold duration (2s), waits past expiry without calling any API; confirms the seat is immediately available again, status derives to `EXPIRED`, and confirmation fails with `409 Conflict`.
-5. **Contract & Error Verification**: Validates all 8 endpoints, status codes, JSON response shapes, RFC 9457 error formats, and `X-Student-Id` header validation.
-
----
-
-## 5. System Architecture
-
-```
-+-----------------------------------------------------------+
-|                     Browser / Client                      |
-|  React 19 + TypeScript + Vite + Zustand + TanStack Query  |
-|  - Student ID Bar (17-digit persisted in localStorage)    |
-|  - Class Listing (Live seat counts polling ~3s)           |
-|  - Admin Class Creation Form                              |
-|  - My Applications (Live countdown, confirm, cancel)      |
-+-----------------------------+-----------------------------+
-                              | HTTP (Port 8080)
-                              | Header: X-Student-Id
-                              v
-+-----------------------------------------------------------+
-|                  ASP.NET Core Minimal API                 |
-|  - Endpoints: /classes, /holds, /me/holds, /health        |
-|  - Application Services: ClassService, HoldService        |
-|  - Concurrency Lock: Row-level SELECT ... FOR UPDATE      |
-|  - Clock: Database clock clock_timestamp()                |
-|  - Background Expiry Sweeper (PeriodicTimer)              |
-+-----------------------------+-----------------------------+
-                              | Npgsql / EF Core 10
-                              v
-+-----------------------------------------------------------+
-|                      PostgreSQL 18                        |
-|  - Classes (id, name, total_seats, created_at)            |
-|  - Holds (id, class_id, student_id, status, expires_at,   |
-|           confirmed_at, cancelled_at, updated_at)         |
-|  - Partial Unique Index: (student_id, class_id)           |
-|    WHERE status IN ('HELD', 'CONFIRMED')                  |
-+-----------------------------+-----------------------------+
-```
-
----
-
-## 6. Environment Configuration
-
-Each application has its **own dedicated env file**, next to the code it configures:
-
-| File | Configures | Template |
-|---|---|---|
-| `backend/.env` | The API **and** the PostgreSQL service it connects to (connection string, hold duration, CORS origins, seeding) | `backend/.env.example` |
-| `frontend/.env` | The backend URL the browser calls | `frontend/.env.example` |
-
-Both files are committed with working local-development defaults, so `docker compose up` needs no
-manual setup. To change a value, edit the file and run `docker compose up -d <service>` —
-Compose detects the changed file and recreates the container.
-
-### `backend/.env`
-
-| Variable | Default | Description |
-|---|---|---|
-| `ASPNETCORE_ENVIRONMENT` | `Development` | ASP.NET Core environment |
-| `ASPNETCORE_HTTP_PORTS` | `8080` | Port the API listens on |
-| `POSTGRES_USER` | `postgres` | Database superuser (used by the `db` service) |
-| `POSTGRES_PASSWORD` | `postgres` | Database password (used by the `db` service) |
-| `POSTGRES_DB` | `school_admission` | Database name (used by the `db` service) |
-| `ConnectionStrings__Default` | `Host=db;Port=5432;…` | **Database connection used by the API.** Inside Docker the host is the Compose service name `db`; use `Host=localhost` when running the API directly on the host. |
-| `HOLD_DURATION_SECONDS` | `600` | Seat hold duration (10 minutes). Must be a positive integer — the API refuses to start otherwise. |
-| `EXPIRY_SWEEP_INTERVAL_SECONDS` | `5` | How often expired holds are swept |
-| `SEED_DEMO_DATA` | `true` | Seed 12 standard classes on clean DB |
-| `CORS_ALLOWED_ORIGINS` | `http://localhost:3000` | Allowed browser origins (comma-separated). Requests from any other origin are rejected. |
-
-### `frontend/.env`
-
-| Variable | Default | Description |
-|---|---|---|
-| `VITE_API_BASE_URL` | `http://localhost:8080` | Backend API URL reachable **by the browser** (not `http://backend:8080`) |
-
-### How values reach the app
-
-Docker Compose loads each file with `env_file:` and passes the variables into the container.
-Inside the container the ASP.NET Core configuration stack then resolves them
-(env var → `appsettings.json` → `appsettings.{Environment}.json` → code default).
-
-> `docker compose restart` reuses the existing container's environment — use `up -d` instead.
-> See [`TECH_STACK.md`](TECH_STACK.md) for the full configuration precedence chain.
-
-### Running a service locally, without Docker
+or
 
 ```bash
-# backend — .NET does not read .env files on its own, so export them first
-set -a; source backend/.env; set +a
-dotnet run --project backend
+dotnet test backend/SchoolAdmission.sln
+```
 
-# frontend — Vite loads frontend/.env automatically
-cd frontend && npm install && npm run dev
+### Detailed Concurrency Test Output
+When the concurrency tests execute, they output formatted benchmark metrics directly to the console:
+
+```text
+================================================================================
+ [CONCURRENCY TEST RESULT: NO OVERSELLING]
+ Total Concurrent Requests Sent : 1000 parallel requests
+ Target Class Total Seats       : 20 seats
+ Successfully Held Seats        : 20 requests (HTTP 201 Created)
+ Rejected (Seats Full)          : 980 requests (HTTP 409 Conflict)
+ Oversold Seats                 : 0 (PASSED - Strict capacity invariant held)
+================================================================================
+
+================================================================================
+ [CONCURRENCY TEST RESULT: SINGLE APPLICATION PER STUDENT]
+ Simultaneous Requests from Same ID : 30 parallel requests
+ Granted Application (Hold)         : 1 request (HTTP 201 Created)
+ Blocked Duplicate Attempts         : 29 requests (HTTP 409 Conflict)
+ Invariant Verified                 : PASSED (No duplicate holds for same student)
+================================================================================
+
+================================================================================
+ [CONCURRENCY TEST RESULT: IDEMPOTENT PAYMENT CONFIRMATION]
+ Simultaneous Confirmations Sent : 20 parallel requests
+ Successful Confirmations (200) : 20 requests
+ Total Confirmed Seats Added     : 1 (Exactly 1, no duplicate counting)
+ Invariant Verified              : PASSED (Idempotency under race conditions)
+================================================================================
 ```
 
 ---
 
-## 7. Pre-Seeded Demo Classes
+## 4. Key Architectural Guarantees
 
-When starting with an empty database and `SEED_DEMO_DATA=true`, the system automatically provisions 12 classes with realistic seat distributions:
-- **Class 1 to Class 5** (Morning & Day shifts)
-- **Class 6** (Morning & Day shifts)
-- **Class 7 to Class 10** (Including full and almost-full states to test UI boundaries)
-- **Demo - Only 2 Seats** (Quick class with 2 seats for manual concurrency testing)
+* **PostgreSQL Pessimistic Locking (`SELECT ... FOR UPDATE`)**: Eliminates race conditions during seat allocation.
+* **Database Engine Clock Synchronization (`clock_timestamp()`)**: Eliminates clock drift issues between distributed application servers.
+* **Partial Unique Indexes**: Enforces single active application per 17-digit student identifier across all classes.
+* **Persistent Named Volumes**: Database state is preserved across container restarts (`docker compose down && docker compose up`).

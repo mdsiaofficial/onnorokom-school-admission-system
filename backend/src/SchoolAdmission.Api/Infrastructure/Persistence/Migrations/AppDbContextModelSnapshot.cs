@@ -101,9 +101,9 @@ partial class AppDbContextModelSnapshot : ModelSnapshot
                 b.HasIndex("StudentId", "CreatedAt")
                     .HasDatabaseName("ix_holds_student_created");
 
-                b.HasIndex("StudentId", "ClassId")
+                b.HasIndex("StudentId")
                     .IsUnique()
-                    .HasDatabaseName("ux_holds_active_student_class")
+                    .HasDatabaseName("ux_holds_active_student")
                     .HasFilter("status IN ('HELD', 'CONFIRMED')");
 
                 b.ToTable("holds", null, t =>

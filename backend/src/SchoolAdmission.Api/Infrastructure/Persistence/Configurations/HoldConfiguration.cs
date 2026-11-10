@@ -15,7 +15,9 @@ public class HoldConfiguration : IEntityTypeConfiguration<Hold>
             t.HasCheckConstraint("ck_holds_status_valid", "status IN ('HELD', 'CONFIRMED', 'EXPIRED', 'CANCELLED')");
         });
 
-        builder.HasKey(h => h.Id);
+        // Name is pinned so the model matches the name created by the initial migration;
+        // the snake-case convention would otherwise rename it to pk_holds.
+        builder.HasKey(h => h.Id).HasName("PK_holds");
         builder.Property(h => h.Id).HasColumnName("id");
 
         builder.Property(h => h.ClassId)
