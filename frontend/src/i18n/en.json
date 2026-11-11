@@ -8,7 +8,22 @@
       "createClass": "Create Class"
     },
     "language": {
-      "toggle": "বাংলা"
+      "toggle": "বাংলা",
+      "switchToEn": "Switch to English",
+      "switchToBn": "Switch to Bangla"
+    },
+    "footer": {
+      "copyright": "© 2026 School Admission Portal — Bangladesh",
+      "ui": "UI: {{url}}",
+      "api": "API: {{url}}",
+      "timezone": "UTC+6"
+    },
+    "documentTitle": "School Admission System | স্কুল ভর্তি পোর্টাল",
+    "teacher": {
+      "panel": "Teacher Panel",
+      "logout": "Log out",
+      "loginTitle": "Log in as a demo teacher",
+      "loginLabel": "Teacher Login (Demo)"
     }
   },
   "studentBar": {
@@ -19,13 +34,14 @@
     "valid": "Valid Student ID",
     "incomplete": "Complete 17 digits",
     "clear": "Clear",
-    "requiredNotice": "Please enter a 17-digit Student ID at the top before applying."
+    "requiredNotice": "Please enter a 17-digit Student ID at the top before applying.",
+    "inputLabel": "Student 17-digit birth registration number"
   },
   "classes": {
     "title": "Available Classes & Seats",
     "description": "Real-time updates of seat availability across classes and shifts.",
     "lastUpdated": "Last updated: {{time}}",
-    "pollingActive": "Live connection active",
+    "pollingActive": "Auto-refreshing every 3s",
     "pollingError": "Connection lost, retrying...",
     "searchPlaceholder": "Search class name...",
     "empty": "No classes found.",
@@ -35,7 +51,8 @@
       "held": "In Process",
       "confirmed": "Confirmed",
       "available": "Available",
-      "action": "Action"
+      "action": "Action",
+      "caption": "Seat availability by class and shift"
     },
     "applyButton": "Apply",
     "applying": "Applying...",
@@ -43,9 +60,34 @@
       "enterStudentId": "Enter 17-digit Student ID above",
       "noSeats": "No seats available",
       "alreadyHeld": "Active hold already exists in this class",
-      "alreadyConfirmed": "Admission already confirmed in this class"
+      "alreadyConfirmed": "Admission already confirmed in this class",
+      "pendingInOther": "Application pending in {{className}}",
+      "confirmedInOther": "Already confirmed in {{className}}"
     },
-    "applySuccess": "Seat successfully held for 10 minutes! Please visit 'My Applications' to complete the admission payment."
+    "applySuccess": "Seat held for {{minutes}} minute(s)! Visit 'My Applications' to pay the admission fee.",
+    "searchLabel": "Search classes",
+    "emptyBody": "No classes have been created yet.",
+    "noSearchResults": "No classes match your search.",
+    "clearSearch": "Clear search",
+    "manage": "Manage",
+    "edit": "Edit",
+    "delete": "Delete",
+    "updateSuccess": "Class updated successfully.",
+    "deleteSuccess": "Class deleted successfully.",
+    "editModal": {
+      "title": "Edit Class Details",
+      "nameLabel": "Class Name & Shift",
+      "seatsLabel": "Total Seats",
+      "seatsCommitted": "Currently {{committed}} seats committed ({{held}} held + {{confirmed}} confirmed).",
+      "nameError": "Name must be 1-120 characters.",
+      "seatsError": "Total seats must be at least 1."
+    },
+    "deleteModal": {
+      "title": "Confirm Class Deletion",
+      "message": "Are you sure you want to delete '{{name}}'?",
+      "warning": "Warning: This class has active holds or confirmed students and cannot be deleted until they are resolved."
+    },
+    "noSearchResultsBody": "Clear the search to see every class."
   },
   "myApplications": {
     "title": "My Applications",
@@ -88,7 +130,10 @@
     "alerts": {
       "confirmSuccess": "Admission successfully confirmed! Congratulations.",
       "cancelSuccess": "Application hold successfully cancelled."
-    }
+    },
+    "enterIdHint": "Enter your 17-digit number in the bar at the top",
+    "currentStudentId": "Current student ID:",
+    "expiredAnnouncement": "The application for {{className}} has expired"
   },
   "admin": {
     "title": "Create New Class or Shift",
@@ -102,8 +147,21 @@
       "seatsHelp": "Total number of seats must be a positive integer.",
       "submit": "Create Class",
       "submitting": "Creating...",
-      "success": "New class successfully created!"
-    }
+      "success": "New class successfully created!",
+      "errors": {
+        "nameRequired": "Class name is required (1-120 characters).",
+        "nameTooLong": "Class name can be at most 120 characters.",
+        "seatsInvalid": "Total seats must be at least 1."
+      }
+    },
+    "gate": {
+      "title": "Reserved for teachers only",
+      "body": "You need to be logged in as a teacher to create classes and assign seats. Use the one-click demo login below.",
+      "login": "One-click teacher login (Demo)",
+      "back": "Back to class list"
+    },
+    "backToList": "Back to class list",
+    "loggedInAs": "Logged in as {{name}}"
   },
   "errors": {
     "SEATS_FULL": "Sorry, no seats are available in this class.",
@@ -120,7 +178,8 @@
     "INVALID_STUDENT_ID": "Birth registration number must be exactly 17 digits.",
     "NETWORK_ERROR": "Unable to connect to the server. Please try again later.",
     "TIMEOUT": "Request timed out. Please try again.",
-    "GENERIC": "Something went wrong. Please try again."
+    "GENERIC": "Something went wrong. Please try again.",
+    "INVALID_CLASS_DATA": "Invalid class data. Name must be 1-120 characters and total seats must be at least 1."
   },
   "common": {
     "loading": "Loading...",
@@ -128,6 +187,13 @@
     "errorBoundaryDesc": "An unexpected error occurred. Please reload the page.",
     "reload": "Reload Page",
     "close": "Close",
-    "seats": "seats"
+    "seats": "seats",
+    "dismissToast": "Dismiss notification",
+    "cancel": "Cancel",
+    "save": "Save Changes"
+  },
+  "notFound": {
+    "title": "404 - Page not found",
+    "body": "The page you are looking for has been moved or removed."
   }
 }

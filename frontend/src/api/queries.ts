@@ -14,13 +14,13 @@ export const useClassesQuery = () => {
   });
 };
 
-export const useMyHoldsQuery = () => {
+export const useMyHoldsQuery = (enabled = true) => {
   const { studentId, isValid } = useStudentStore();
 
   return useQuery({
     queryKey: ['my-holds', studentId],
     queryFn: getMyHolds,
-    enabled: isValid && Boolean(studentId),
+    enabled: enabled && isValid && Boolean(studentId),
     refetchInterval: 5000, // Poll every ~5s
     refetchIntervalInBackground: false,
     staleTime: 3000,

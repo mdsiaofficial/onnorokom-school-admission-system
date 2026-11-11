@@ -9,6 +9,7 @@ dist/
 dist-ssr/
 *.local
 .vite/
+*.tsbuildinfo
 
 # Environment files (preserve template)
 .env

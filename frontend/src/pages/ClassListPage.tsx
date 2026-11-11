@@ -11,18 +11,19 @@ import {
 import { useStudentStore } from '@/stores/studentStore';
 import { useLanguageStore } from '@/stores/languageStore';
 import { useAuthStore } from '@/stores/authStore';
+import { getClassRowState, ActiveStudentHold } from '@/hooks/classRowState';
 import { formatDhakaTime, formatNumber } from '@/utils/formatters';
 import { getLocalizedErrorMessage } from '@/utils/errors';
 import { toast } from '@/components/ToastContainer';
 import { TableSkeleton, CardSkeleton } from '@/components/LoadingSkeleton';
 import { Modal } from '@/components/Modal';
+import { ApplyButton, ApplyReason } from '@/components/ApplyButton';
 import { ClassSummary } from '@/api/types';
 import {
   Users,
   Clock,
   CheckCircle,
   AlertCircle,
-  ArrowRight,
   Search,
   RefreshCw,
   Edit2,
@@ -47,7 +48,8 @@ export const ClassListPage: React.FC = () => {
     dataUpdatedAt,
   } = useClassesQuery();
 
-  const { data: myHolds } = useMyHoldsQuery();
+  // Teachers never apply for seats, so their own applications are not polled.
+  const { data: myHolds } = useMyHoldsQuery(!isTeacher);
   const applyMutation = useApplySeatMutation();
   const updateMutation = useUpdateClassMutation();
   const deleteMutation = useDeleteClassMutation();
@@ -74,11 +76,11 @@ export const ClassListPage: React.FC = () => {
     const trimmed = editName.trim();
     const seatsNum = parseInt(editSeats, 10);
     if (!trimmed || trimmed.length > 120) {
-      setEditError(language === 'bn' ? 'নাম 1-120 অক্ষরের মধ্যে হতে হবে।' : 'Name must be 1-120 characters.');
+      setEditError(t('classes.editModal.nameError'));
       return;
     }
     if (Number.isNaN(seatsNum) || seatsNum <= 0) {
-      setEditError(language === 'bn' ? 'আসন সংখ্যা কমপক্ষে 1 হতে হবে।' : 'Total seats must be at least 1.');
+      setEditError(t('classes.editModal.seatsError'));
       return;
     }
 
@@ -87,7 +89,7 @@ export const ClassListPage: React.FC = () => {
         classId: editingClass.id,
         data: { name: trimmed, totalSeats: seatsNum },
       });
-      toast.success(language === 'bn' ? 'ক্লাসের তথ্য সফলভাবে আপডেট করা হয়েছে।' : 'Class updated successfully.');
+      toast.success(t('classes.updateSuccess'));
       setEditingClass(null);
     } catch (err) {
       const msg = getLocalizedErrorMessage(err);
@@ -99,7 +101,7 @@ export const ClassListPage: React.FC = () => {
     if (!deletingClass) return;
     try {
       await deleteMutation.mutateAsync(deletingClass.id);
-      toast.success(language === 'bn' ? 'ক্লাস সফলভাবে মুছে ফেলা হয়েছে।' : 'Class deleted successfully.');
+      toast.success(t('classes.deleteSuccess'));
       setDeletingClass(null);
     } catch (err) {
       const msg = getLocalizedErrorMessage(err);
@@ -114,17 +116,17 @@ export const ClassListPage: React.FC = () => {
     }
   }, [dataUpdatedAt]);
 
-  // Map student's active hold or confirmation
-  const activeStudentHold = React.useMemo(() => {
-    if (myHolds && Array.isArray(myHolds)) {
-      return myHolds.find((h) => h.status === 'HELD' || h.status === 'CONFIRMED');
-    }
-    return null;
+  // The student's own active hold (any class) — one active application per student.
+  const activeStudentHold = React.useMemo<ActiveStudentHold | null>(() => {
+    if (!Array.isArray(myHolds)) return null;
+    const hold = myHolds.find((h) => h.status === 'HELD' || h.status === 'CONFIRMED');
+    if (!hold) return null;
+    return { status: hold.status as 'HELD' | 'CONFIRMED', className: hold.className };
   }, [myHolds]);
 
   const studentClassStatus = React.useMemo(() => {
     const map = new Map<string, 'HELD' | 'CONFIRMED'>();
-    if (myHolds && Array.isArray(myHolds)) {
+    if (Array.isArray(myHolds)) {
       for (const hold of myHolds) {
         if (hold.status === 'HELD' || hold.status === 'CONFIRMED') {
           map.set(hold.classId, hold.status);
@@ -141,8 +143,13 @@ export const ClassListPage: React.FC = () => {
     }
 
     try {
-      await applyMutation.mutateAsync(classId);
-      toast.success(t('classes.applySuccess'), 8000);
+      const hold = await applyMutation.mutateAsync(classId);
+      // Report the hold the server actually granted instead of a hard-coded duration.
+      const minutes = Math.max(
+        1,
+        Math.round((new Date(hold.expiresAt).getTime() - Date.now()) / 60000)
+      );
+      toast.success(t('classes.applySuccess', { minutes }), 8000);
       navigate('/my-applications');
     } catch (err) {
       const msg = getLocalizedErrorMessage(err);
@@ -156,6 +163,8 @@ export const ClassListPage: React.FC = () => {
     const term = search.toLowerCase();
     return classes.filter((c) => c.name.toLowerCase().includes(term));
   }, [classes, search]);
+
+  const isSearching = search.trim().length > 0;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -192,7 +201,7 @@ export const ClassListPage: React.FC = () => {
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
             <span>{t('classes.title')}</span>
             <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping motion-reduce:animate-none"></span>
               {t('classes.pollingActive')}
             </span>
           </h1>
@@ -218,8 +227,12 @@ export const ClassListPage: React.FC = () => {
       <div className="mb-6">
         <div className="relative max-w-md">
           <Search className="w-5 h-5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <label htmlFor="class-search" className="sr-only">
+            {t('classes.searchLabel')}
+          </label>
           <input
-            type="text"
+            id="class-search"
+            type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t('classes.searchPlaceholder')}
@@ -244,17 +257,27 @@ export const ClassListPage: React.FC = () => {
             <Users className="w-8 h-8" />
           </div>
           <h3 className="text-lg font-bold text-slate-800 mb-1">
-            {t('classes.empty')}
+            {isSearching ? t('classes.noSearchResults') : t('classes.empty')}
           </h3>
           <p className="text-sm text-slate-500">
-            {t('classes.description')}
+            {isSearching ? t('classes.noSearchResultsBody') : t('classes.emptyBody')}
           </p>
+          {isSearching && (
+            <button
+              type="button"
+              onClick={() => setSearch('')}
+              className="mt-5 inline-flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold px-4 py-2 rounded-xl transition"
+            >
+              {t('classes.clearSearch')}
+            </button>
+          )}
         </div>
       ) : (
         <>
           {/* Desktop Table View */}
           <div className="hidden md:block bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
             <table className="min-w-full divide-y divide-slate-200">
+              <caption className="sr-only">{t('classes.table.caption')}</caption>
               <thead className="bg-slate-50/80">
                 <tr>
                   <th
@@ -291,37 +314,23 @@ export const ClassListPage: React.FC = () => {
                     scope="col"
                     className="py-3.5 pl-3 pr-6 text-right text-xs font-bold text-slate-600 uppercase tracking-wider"
                   >
-                    {isTeacher ? (language === 'bn' ? 'ম্যানেজ করুন' : 'Manage') : t('classes.table.action')}
+                    {isTeacher ? t('classes.manage') : t('classes.table.action')}
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white">
                 {filteredClasses.map((cls) => {
                   const existingStatus = studentClassStatus.get(cls.id);
-                  const isAlreadyHeld = existingStatus === 'HELD';
-                  const isAlreadyConfirmed = existingStatus === 'CONFIRMED';
-                  const isSeatsFull = cls.availableSeats <= 0;
                   const isApplyingThis =
-                    applyMutation.isPending &&
-                    applyMutation.variables === cls.id;
-
-                  // Disabled reason
-                  let disabledReason = '';
-                  if (!isStudentIdValid) {
-                    disabledReason = t('classes.reasons.enterStudentId');
-                  } else if (isAlreadyConfirmed) {
-                    disabledReason = t('classes.reasons.alreadyConfirmed');
-                  } else if (isAlreadyHeld) {
-                    disabledReason = t('classes.reasons.alreadyHeld');
-                  } else if (activeStudentHold) {
-                    disabledReason = activeStudentHold.status === 'CONFIRMED'
-                      ? (language === 'bn' ? `অন্য ক্লাসে ভর্তি নিশ্চিত হয়েছে (${activeStudentHold.className})` : `Already confirmed in ${activeStudentHold.className}`)
-                      : (language === 'bn' ? `অন্য ক্লাসে আবেদন চলমান আছে (${activeStudentHold.className})` : `Application pending in ${activeStudentHold.className}`);
-                  } else if (isSeatsFull) {
-                    disabledReason = t('classes.reasons.noSeats');
-                  }
-
-                  const isDisabled = Boolean(disabledReason) || isApplyingThis;
+                    applyMutation.isPending && applyMutation.variables === cls.id;
+                  const { isDisabled, disabledReason } = getClassRowState(
+                    t,
+                    cls,
+                    existingStatus,
+                    activeStudentHold,
+                    isStudentIdValid,
+                    isApplyingThis
+                  );
 
                   return (
                     <tr
@@ -368,7 +377,7 @@ export const ClassListPage: React.FC = () => {
                               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 transition shadow-sm"
                             >
                               <Edit2 className="w-3.5 h-3.5" />
-                              <span>{language === 'bn' ? 'সম্পাদনা' : 'Edit'}</span>
+                              <span>{t('classes.edit')}</span>
                             </button>
                             <button
                               type="button"
@@ -376,39 +385,20 @@ export const ClassListPage: React.FC = () => {
                               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 transition shadow-sm"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
-                              <span>{language === 'bn' ? 'মুছুন' : 'Delete'}</span>
+                              <span>{t('classes.delete')}</span>
                             </button>
                           </div>
                         ) : (
-                          <div className="inline-flex flex-col items-end">
-                            <button
-                              type="button"
-                              disabled={isDisabled}
-                              onClick={() => handleApply(cls.id, cls.name)}
-                              className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all shadow-sm ${
-                                isDisabled
-                                  ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
-                                  : 'bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white shadow-emerald-600/20 hover:shadow-md'
-                              }`}
-                              title={disabledReason || undefined}
-                            >
-                              {isApplyingThis ? (
-                                <>
-                                  <RefreshCw className="w-4 h-4 animate-spin" />
-                                  <span>{t('classes.applying')}</span>
-                                </>
-                              ) : (
-                                <>
-                                  <span>{t('classes.applyButton')}</span>
-                                  <ArrowRight className="w-4 h-4" />
-                                </>
-                              )}
-                            </button>
-                            {disabledReason && (
-                              <span className="text-[11px] text-slate-500 mt-1 max-w-[200px] text-right truncate">
-                                {disabledReason}
-                              </span>
-                            )}
+                          <div className="inline-flex flex-col items-end gap-1">
+                            <ApplyButton
+                              isDisabled={isDisabled}
+                              isApplying={isApplyingThis}
+                              onApply={() => handleApply(cls.id, cls.name)}
+                            />
+                            <ApplyReason
+                              reason={disabledReason}
+                              className="max-w-[220px] text-right"
+                            />
                           </div>
                         )}
                       </td>
@@ -423,29 +413,16 @@ export const ClassListPage: React.FC = () => {
           <div className="md:hidden grid grid-cols-1 gap-4">
             {filteredClasses.map((cls) => {
               const existingStatus = studentClassStatus.get(cls.id);
-              const isAlreadyHeld = existingStatus === 'HELD';
-              const isAlreadyConfirmed = existingStatus === 'CONFIRMED';
-              const isSeatsFull = cls.availableSeats <= 0;
               const isApplyingThis =
-                applyMutation.isPending &&
-                applyMutation.variables === cls.id;
-
-              let disabledReason = '';
-              if (!isStudentIdValid) {
-                disabledReason = t('classes.reasons.enterStudentId');
-              } else if (isAlreadyConfirmed) {
-                disabledReason = t('classes.reasons.alreadyConfirmed');
-              } else if (isAlreadyHeld) {
-                disabledReason = t('classes.reasons.alreadyHeld');
-              } else if (activeStudentHold) {
-                disabledReason = activeStudentHold.status === 'CONFIRMED'
-                  ? (language === 'bn' ? `অন্য ক্লাসে ভর্তি নিশ্চিত হয়েছে (${activeStudentHold.className})` : `Already confirmed in ${activeStudentHold.className}`)
-                  : (language === 'bn' ? `অন্য ক্লাসে আবেদন চলমান আছে (${activeStudentHold.className})` : `Application pending in ${activeStudentHold.className}`);
-              } else if (isSeatsFull) {
-                disabledReason = t('classes.reasons.noSeats');
-              }
-
-              const isDisabled = Boolean(disabledReason) || isApplyingThis;
+                applyMutation.isPending && applyMutation.variables === cls.id;
+              const { isDisabled, disabledReason } = getClassRowState(
+                t,
+                cls,
+                existingStatus,
+                activeStudentHold,
+                isStudentIdValid,
+                isApplyingThis
+              );
 
               return (
                 <div
@@ -503,7 +480,7 @@ export const ClassListPage: React.FC = () => {
                         className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-semibold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 transition"
                       >
                         <Edit2 className="w-3.5 h-3.5" />
-                        <span>{language === 'bn' ? 'সম্পাদনা' : 'Edit'}</span>
+                        <span>{t('classes.edit')}</span>
                       </button>
                       <button
                         type="button"
@@ -511,38 +488,19 @@ export const ClassListPage: React.FC = () => {
                         className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-semibold bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 transition"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
-                        <span>{language === 'bn' ? 'মুছুন' : 'Delete'}</span>
+                        <span>{t('classes.delete')}</span>
                       </button>
                     </div>
                   ) : (
-                    <button
-                      type="button"
-                      disabled={isDisabled}
-                      onClick={() => handleApply(cls.id, cls.name)}
-                      className={`w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-sm font-semibold transition-all shadow-sm ${
-                        isDisabled
-                          ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
-                          : 'bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white'
-                      }`}
-                    >
-                      {isApplyingThis ? (
-                        <>
-                          <RefreshCw className="w-4 h-4 animate-spin" />
-                          <span>{t('classes.applying')}</span>
-                        </>
-                      ) : (
-                        <>
-                          <span>{t('classes.applyButton')}</span>
-                          <ArrowRight className="w-4 h-4" />
-                        </>
-                      )}
-                    </button>
-                  )}
-
-                  {disabledReason && (
-                    <p className="text-xs text-center text-slate-500">
-                      {disabledReason}
-                    </p>
+                    <div className="space-y-1.5">
+                      <ApplyButton
+                        isDisabled={isDisabled}
+                        isApplying={isApplyingThis}
+                        onApply={() => handleApply(cls.id, cls.name)}
+                        className="w-full justify-center py-2.5"
+                      />
+                      <ApplyReason reason={disabledReason} className="text-center" />
+                    </div>
                   )}
                 </div>
               );
@@ -556,7 +514,7 @@ export const ClassListPage: React.FC = () => {
         <Modal
           isOpen={Boolean(editingClass)}
           onClose={() => setEditingClass(null)}
-          title={language === 'bn' ? 'ক্লাসের তথ্য সম্পাদনা' : 'Edit Class Details'}
+          title={t('classes.editModal.title')}
         >
           <form onSubmit={handleSaveEdit} className="space-y-4">
             {editError && (
@@ -565,10 +523,14 @@ export const ClassListPage: React.FC = () => {
               </div>
             )}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                {language === 'bn' ? 'ক্লাসের নাম ও শিফট' : 'Class Name & Shift'}
+              <label
+                htmlFor="edit-class-name"
+                className="block text-xs font-semibold text-slate-700 mb-1"
+              >
+                {t('classes.editModal.nameLabel')}
               </label>
               <input
+                id="edit-class-name"
                 type="text"
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
@@ -578,10 +540,14 @@ export const ClassListPage: React.FC = () => {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                {language === 'bn' ? 'মোট আসন সংখ্যা' : 'Total Seats'}
+              <label
+                htmlFor="edit-class-seats"
+                className="block text-xs font-semibold text-slate-700 mb-1"
+              >
+                {t('classes.editModal.seatsLabel')}
               </label>
               <input
+                id="edit-class-seats"
                 type="number"
                 min={editingClass.heldSeats + editingClass.confirmedSeats}
                 value={editSeats}
@@ -590,9 +556,13 @@ export const ClassListPage: React.FC = () => {
                 required
               />
               <p className="text-[11px] text-slate-500 mt-1">
-                {language === 'bn'
-                  ? `বর্তমানে ${formatNumber(editingClass.heldSeats + editingClass.confirmedSeats)} টি আসন দখলকৃত (${formatNumber(editingClass.heldSeats)} আবেদন + ${formatNumber(editingClass.confirmedSeats)} নিশ্চিত)।`
-                  : `Currently ${editingClass.heldSeats + editingClass.confirmedSeats} seats committed (${editingClass.heldSeats} held + ${editingClass.confirmedSeats} confirmed).`}
+                {t('classes.editModal.seatsCommitted', {
+                  committed: formatNumber(
+                    editingClass.heldSeats + editingClass.confirmedSeats
+                  ),
+                  held: formatNumber(editingClass.heldSeats),
+                  confirmed: formatNumber(editingClass.confirmedSeats),
+                })}
               </p>
             </div>
             <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
@@ -601,15 +571,17 @@ export const ClassListPage: React.FC = () => {
                 onClick={() => setEditingClass(null)}
                 className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 rounded-xl"
               >
-                {language === 'bn' ? 'বাতিল' : 'Cancel'}
+                {t('common.cancel')}
               </button>
               <button
                 type="submit"
                 disabled={updateMutation.isPending}
                 className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-sm transition disabled:opacity-50"
               >
-                {updateMutation.isPending && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
-                <span>{language === 'bn' ? 'সংরক্ষণ করুন' : 'Save Changes'}</span>
+                {updateMutation.isPending && (
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin motion-reduce:animate-none" />
+                )}
+                <span>{t('common.save')}</span>
               </button>
             </div>
           </form>
@@ -621,19 +593,15 @@ export const ClassListPage: React.FC = () => {
         <Modal
           isOpen={Boolean(deletingClass)}
           onClose={() => setDeletingClass(null)}
-          title={language === 'bn' ? 'ক্লাস মুছে ফেলার নিশ্চিতকরণ' : 'Confirm Class Deletion'}
+          title={t('classes.deleteModal.title')}
         >
           <div className="space-y-4">
             <p className="text-sm text-slate-600">
-              {language === 'bn'
-                ? `আপনি কি নিশ্চিত যে '${deletingClass.name}' ক্লাসটি মুছে ফেলতে চান?`
-                : `Are you sure you want to delete '${deletingClass.name}'?`}
+              {t('classes.deleteModal.message', { name: deletingClass.name })}
             </p>
             {deletingClass.heldSeats + deletingClass.confirmedSeats > 0 && (
               <div className="p-3 text-xs bg-amber-50 border border-amber-200 text-amber-800 rounded-xl">
-                {language === 'bn'
-                  ? 'সতর্কতা: এই ক্লাসে সক্রিয় আবেদন বা নিশ্চিত শিক্ষার্থী রয়েছে। চলমান আবেদন শেষ না হওয়া পর্যন্ত এটি মুছে ফেলা যাবে না।'
-                  : 'Warning: This class has active holds or confirmed students and cannot be deleted until they are resolved.'}
+                {t('classes.deleteModal.warning')}
               </div>
             )}
             <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
@@ -642,7 +610,7 @@ export const ClassListPage: React.FC = () => {
                 onClick={() => setDeletingClass(null)}
                 className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 rounded-xl"
               >
-                {language === 'bn' ? 'বাতিল' : 'Cancel'}
+                {t('common.cancel')}
               </button>
               <button
                 type="button"
@@ -650,8 +618,10 @@ export const ClassListPage: React.FC = () => {
                 onClick={handleConfirmDelete}
                 className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white rounded-xl shadow-sm transition disabled:opacity-50"
               >
-                {deleteMutation.isPending && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
-                <span>{language === 'bn' ? 'হ্যাঁ, মুছুন' : 'Yes, Delete'}</span>
+                {deleteMutation.isPending && (
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin motion-reduce:animate-none" />
+                )}
+                <span>{t('classes.delete')}</span>
               </button>
             </div>
           </div>

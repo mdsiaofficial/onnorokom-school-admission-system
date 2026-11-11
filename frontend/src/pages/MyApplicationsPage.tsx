@@ -88,7 +88,7 @@ export const MyApplicationsPage: React.FC = () => {
             {t('studentBar.helper')}
           </p>
           <div className="inline-flex items-center gap-2 text-xs font-semibold text-emerald-700 bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-200">
-            <span>উপরে স্ক্রিনের শীর্ষবারে 17 অঙ্কের নম্বর প্রবেশ করান</span>
+            <span>{t('myApplications.enterIdHint')}</span>
           </div>
         </div>
       ) : isLoading ? (
@@ -114,7 +114,8 @@ export const MyApplicationsPage: React.FC = () => {
             {t('myApplications.empty')}
           </h2>
           <p className="text-slate-500 text-sm mb-6">
-            বর্তমান শিক্ষার্থী আইডি: <span className="font-mono font-bold text-slate-700">{studentId}</span>
+            {t('myApplications.currentStudentId')}{' '}
+            <span className="font-mono font-bold text-slate-700">{studentId}</span>
           </p>
           <Link
             to="/"

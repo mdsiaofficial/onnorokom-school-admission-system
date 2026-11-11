@@ -1,5 +1,6 @@
 import React from 'react';
 import { create } from 'zustand';
+import { useTranslation } from 'react-i18next';
 import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
 
 export type ToastType = 'success' | 'error' | 'info';
@@ -50,23 +51,26 @@ export const toast = {
 
 export const ToastContainer: React.FC = () => {
   const { toasts, removeToast } = useToastStore();
+  const { t } = useTranslation();
 
   if (toasts.length === 0) return null;
 
   return (
     <div
       aria-live="polite"
+      aria-atomic="false"
       className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full px-4 sm:px-0 pointer-events-none"
     >
-      {toasts.map((t) => {
-        const isSuccess = t.type === 'success';
-        const isError = t.type === 'error';
+      {toasts.map((item) => {
+        const isSuccess = item.type === 'success';
+        const isError = item.type === 'error';
 
         return (
           <div
-            key={t.id}
-            role="alert"
-            className={`pointer-events-auto flex items-start gap-3 p-4 rounded-xl shadow-lg border transition-all transform duration-200 ${
+            key={item.id}
+            // Errors interrupt (assertive); success/info are announced politely.
+            role={isError ? 'alert' : 'status'}
+            className={`pointer-events-auto flex items-start gap-3 p-4 rounded-xl shadow-lg border transition-all transform duration-200 motion-reduce:transition-none ${
               isSuccess
                 ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
                 : isError
@@ -80,12 +84,13 @@ export const ToastContainer: React.FC = () => {
               {!isSuccess && !isError && <Info className="w-5 h-5 text-blue-600" />}
             </div>
             <div className="flex-1 text-sm font-medium leading-relaxed">
-              {t.message}
+              {item.message}
             </div>
             <button
-              onClick={() => removeToast(t.id)}
+              type="button"
+              onClick={() => removeToast(item.id)}
               className="shrink-0 text-slate-400 hover:text-slate-700 transition p-0.5 rounded-lg"
-              aria-label="Close"
+              aria-label={t('common.dismissToast')}
             >
               <X className="w-4 h-4" />
             </button>

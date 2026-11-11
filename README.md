@@ -31,9 +31,10 @@ docker compose down
 1. Open [http://localhost:3000](http://localhost:3000).
 2. Enter a **17-digit Birth Registration Number** (e.g. `20150000000000001`).
 3. Browse the live class list with real-time seat status counts (Total, Held, Confirmed, Available).
-4. Click **Apply (আবেদন করুন)** to hold a seat for 10 minutes.
+4. Click **Apply (আবেদন করুন)** to hold a seat — the hold window is `HOLD_DURATION_SECONDS` (10 minutes by default) and the countdown is shown live.
 5. In **My Applications (আমার আবেদন)**, click **Pay Admission Fee** to confirm or **Cancel** to immediately return the seat.
 6. Use the **Teacher Login (Demo)** button in the navbar to test administrative class creation.
+7. Switch the interface language with the **English / বাংলা** toggle in the navbar — Bangla is the default, English is available for staff and reviewers (see [`ASSUMPTIONS.md`](ASSUMPTIONS.md) §8).
 
 ---
 

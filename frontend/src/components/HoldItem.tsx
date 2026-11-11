@@ -63,6 +63,10 @@ export const HoldItem: React.FC<HoldItemProps> = ({
           : 'border-slate-200'
       }`}
     >
+      {/* Live region kept mounted so the expiry is announced when the countdown ends. */}
+      <span role="status" aria-live="polite" className="sr-only">
+        {isExpired ? t('myApplications.expiredAnnouncement', { className: hold.className }) : ''}
+      </span>
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         {/* Left: Class name & details */}
         <div className="space-y-1.5">
@@ -84,7 +88,7 @@ export const HoldItem: React.FC<HoldItemProps> = ({
         {/* Center: Live countdown for HELD status */}
         {isHeld && (
           <div className="flex items-center gap-2 bg-amber-50 border border-amber-200/80 rounded-xl px-4 py-2 text-amber-900">
-            <Clock className="w-5 h-5 text-amber-600 animate-pulse shrink-0" />
+            <Clock className="w-5 h-5 text-amber-600 animate-pulse motion-reduce:animate-none shrink-0" />
             <div>
               <div className="text-[11px] font-medium text-amber-700 uppercase tracking-wide">
                 {t('myApplications.table.timeRemaining')}

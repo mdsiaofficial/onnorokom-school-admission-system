@@ -22,14 +22,14 @@ export const AdminCreateClassPage: React.FC = () => {
 
     const trimmed = name.trim();
     if (!trimmed) {
-      errs.name = 'ক্লাসের নাম আবশ্যক (1-120 অক্ষর)।';
+      errs.name = t('admin.form.errors.nameRequired');
     } else if (trimmed.length > 120) {
-      errs.name = 'ক্লাসের নাম সর্বোচ্চ 120 অক্ষর হতে পারে।';
+      errs.name = t('admin.form.errors.nameTooLong');
     }
 
     const seatsNum = parseInt(totalSeats, 10);
     if (!totalSeats || Number.isNaN(seatsNum) || seatsNum <= 0) {
-      errs.totalSeats = 'মোট আসন সংখ্যা কমপক্ষে 1 বা তার বেশি হতে হবে।';
+      errs.totalSeats = t('admin.form.errors.seatsInvalid');
     }
 
     setErrors(errs);
@@ -62,10 +62,10 @@ export const AdminCreateClassPage: React.FC = () => {
             <Lock className="w-8 h-8" />
           </div>
           <h2 className="text-xl font-bold text-slate-900 mb-2">
-            শুধুমাত্র শিক্ষকদের জন্য সংরক্ষিত
+            {t('admin.gate.title')}
           </h2>
           <p className="text-sm text-slate-500 mb-6 leading-relaxed">
-            নতুন ক্লাস তৈরি এবং আসন বরাদ্দ করার জন্য শিক্ষক হিসেবে লগইন করা আবশ্যক। নিচে এক-ক্লিকে ডেমো লগইন করুন।
+            {t('admin.gate.body')}
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <button
@@ -73,13 +73,13 @@ export const AdminCreateClassPage: React.FC = () => {
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-6 rounded-xl shadow-md transition"
             >
               <LogIn className="w-4 h-4" />
-              <span>এক-ক্লিক শিক্ষক লগইন (Demo)</span>
+              <span>{t('admin.gate.login')}</span>
             </button>
             <button
               onClick={() => navigate('/')}
               className="w-full sm:w-auto text-slate-600 hover:text-slate-900 font-semibold py-2.5 px-4 text-sm"
             >
-              ক্লাস তালিকায় ফিরুন
+              {t('admin.gate.back')}
             </button>
           </div>
         </div>
@@ -97,12 +97,12 @@ export const AdminCreateClassPage: React.FC = () => {
           className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800 transition"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>ক্লাস তালিকায় ফিরে যান</span>
+          <span>{t('admin.backToList')}</span>
         </button>
 
         <span className="inline-flex items-center gap-1.5 text-xs font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 px-3 py-1 rounded-full">
           <UserCheck2 className="w-3.5 h-3.5" />
-          <span>{teacherName} হিসেবে লগইন আছেন</span>
+          <span>{t('admin.loggedInAs', { name: teacherName })}</span>
         </span>
       </div>
 

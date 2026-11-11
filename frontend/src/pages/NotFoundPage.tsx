@@ -11,12 +11,8 @@ export const NotFoundPage: React.FC = () => {
       <div className="w-16 h-16 bg-slate-100 text-slate-500 rounded-full flex items-center justify-center mx-auto mb-4">
         <AlertCircle className="w-8 h-8" />
       </div>
-      <h1 className="text-2xl font-bold text-slate-900 mb-2">
-        404 - পৃষ্ঠাটি খুঁজে পাওয়া যায়নি
-      </h1>
-      <p className="text-slate-600 text-sm mb-6">
-        আপনি যে পৃষ্ঠাটি খুঁজছেন তা স্থানান্তরিত বা মুছে ফেলা হয়েছে।
-      </p>
+      <h1 className="text-2xl font-bold text-slate-900 mb-2">{t('notFound.title')}</h1>
+      <p className="text-slate-600 text-sm mb-6">{t('notFound.body')}</p>
       <Link
         to="/"
         className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm px-5 py-2.5 rounded-xl shadow-sm transition"

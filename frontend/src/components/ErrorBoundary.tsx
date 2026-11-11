@@ -1,5 +1,6 @@
 import { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
+import i18n from '@/i18n/i18n';
 
 interface Props {
   children: ReactNode;
@@ -36,22 +37,21 @@ export class ErrorBoundary extends Component<Props, State> {
               <AlertTriangle className="w-8 h-8" />
             </div>
             <h1 className="text-xl font-bold text-slate-900 mb-2">
-              পৃষ্ঠা প্রদর্শনে সমস্যা হয়েছে
+              {i18n.t('common.errorBoundaryTitle')}
             </h1>
-            <p className="text-slate-600 text-sm mb-6">
-              একটি অপ্রত্যাশিত ত্রুটি ঘটেছে। অনুগ্রহ করে পৃষ্ঠাটি পুনরায় লোড করুন।
-            </p>
+            <p className="text-slate-600 text-sm mb-6">{i18n.t('common.errorBoundaryDesc')}</p>
             {this.state.error?.message && (
               <div className="bg-slate-100 rounded-lg p-3 text-xs text-slate-700 font-mono text-left mb-6 overflow-x-auto">
                 {this.state.error.message}
               </div>
             )}
             <button
+              type="button"
               onClick={this.handleReload}
               className="w-full inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2.5 px-4 rounded-xl transition shadow-sm"
             >
               <RefreshCw className="w-4 h-4" />
-              পৃষ্ঠা রিলোড করুন (Reload Page)
+              {i18n.t('common.reload')}
             </button>
           </div>
         </div>

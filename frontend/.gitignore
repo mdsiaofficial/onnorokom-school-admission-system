@@ -9,5 +9,5 @@ dist-ssr/
 #   frontend/.env is tracked on purpose: it holds local-development placeholders
 #   only (no real credentials) and it keeps `docker compose up` working without a
 #   manual setup step.
-.env.*
+.env
 !.env.example

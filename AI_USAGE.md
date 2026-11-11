@@ -1,12 +1,12 @@
 AI USAGE - School Admission System
 
 1. AI Tools Used
-- gemini-3.8-flash: Used for scaffolding initial boilerplate code (.NET Minimal APIs, React components, and xUnit test structures).
+- gemini-3.8-flash: Used for creating initial boilerplate code (.NET Minimal APIs, React components, and xUnit test structures).
 
 2. Tasks Where AI Assisted
 - Initial project structure setup and drafting endpoint contracts.
 - Generating Bangla and English localization key files.
-- Drafting test scaffolding for concurrent requests and validation checks.
+- Drafting test files for concurrent requests and validation checks.
 
 3. Mistakes Made by AI and Human Corrections
 - PostgreSQL Volume Mount: AI initially suggested mounting to /var/lib/postgresql/data, which caused cluster initialization issues in PostgreSQL 18 Alpine. 

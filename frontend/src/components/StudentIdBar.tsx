@@ -19,9 +19,12 @@ export const StudentIdBar: React.FC = () => {
         {/* Left helper label */}
         <div className="flex items-center gap-2 text-xs md:text-sm text-slate-300 w-full md:w-auto">
           <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0" />
-          <span className="font-medium text-slate-200">
+          <label
+            htmlFor="student-id-input"
+            className="font-medium text-slate-200 cursor-pointer"
+          >
             {t('studentBar.label')}
-          </span>
+          </label>
           <span className="hidden lg:inline text-slate-400">
             ({t('studentBar.helper')})
           </span>
@@ -31,6 +34,7 @@ export const StudentIdBar: React.FC = () => {
         <div className="flex items-center gap-2 w-full md:w-auto">
           <div className="relative flex-1 md:w-80">
             <input
+              id="student-id-input"
               type="text"
               inputMode="numeric"
               pattern="[0-9]*"
@@ -38,6 +42,9 @@ export const StudentIdBar: React.FC = () => {
               value={studentId}
               onChange={handleChange}
               placeholder={t('studentBar.placeholder')}
+              aria-label={t('studentBar.inputLabel')}
+              aria-describedby="student-id-status"
+              aria-invalid={length > 0 && !isValid}
               className={`w-full bg-slate-800 text-white placeholder-slate-400 text-sm font-mono tracking-wider px-3.5 py-2 pr-20 rounded-xl border transition-all focus:outline-none focus:ring-2 ${
                 isValid
                   ? 'border-emerald-500 focus:ring-emerald-500/30'
@@ -50,6 +57,7 @@ export const StudentIdBar: React.FC = () => {
             {/* Counter and clear button inside input */}
             <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5 pointer-events-auto">
               <span
+                aria-hidden="true"
                 className={`text-xs font-mono font-semibold px-1.5 py-0.5 rounded ${
                   isValid
                     ? 'bg-emerald-950 text-emerald-400'
@@ -58,7 +66,7 @@ export const StudentIdBar: React.FC = () => {
                     : 'text-slate-500'
                 }`}
               >
-                {length}/17
+                {t('studentBar.counter', { current: length })}
               </span>
 
               {length > 0 && (
@@ -66,7 +74,7 @@ export const StudentIdBar: React.FC = () => {
                   type="button"
                   onClick={clearStudentId}
                   className="text-slate-400 hover:text-white p-0.5 rounded transition"
-                  title={t('studentBar.clear')}
+                  aria-label={t('studentBar.clear')}
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -75,7 +83,7 @@ export const StudentIdBar: React.FC = () => {
           </div>
 
           {/* Validity status icon */}
-          <div className="shrink-0 flex items-center">
+          <div id="student-id-status" className="shrink-0 flex items-center" aria-live="polite">
             {isValid ? (
               <div
                 className="flex items-center gap-1 text-emerald-400 text-xs font-medium bg-emerald-950/60 border border-emerald-800/60 px-2.5 py-1.5 rounded-lg"

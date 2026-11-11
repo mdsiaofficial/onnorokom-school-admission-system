@@ -11,7 +11,8 @@ export const Header: React.FC = () => {
   const { t } = useTranslation();
   const { language, toggleLanguage } = useLanguageStore();
   const { isTeacher, teacherName, loginAsTeacher, logout } = useAuthStore();
-  const { data: myHolds } = useMyHoldsQuery();
+  // Teachers never apply for seats, so the student's applications are not polled for them.
+  const { data: myHolds } = useMyHoldsQuery(!isTeacher);
 
   // Count active holds (status === 'HELD')
   const activeHoldsCount = myHolds?.filter((h) => h.status === 'HELD').length || 0;
@@ -72,7 +73,7 @@ export const Header: React.FC = () => {
                   <UserCheck className="w-4 h-4" />
                   <span>{t('app.nav.myApplications')}</span>
                   {activeHoldsCount > 0 && (
-                    <span className="ml-1 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold font-mono leading-none text-white bg-amber-600 rounded-full animate-pulse">
+                    <span className="ml-1 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold font-mono leading-none text-white bg-amber-600 rounded-full animate-pulse motion-reduce:animate-none">
                       {activeHoldsCount}
                     </span>
                   )}
@@ -104,29 +105,31 @@ export const Header: React.FC = () => {
               <div className="flex items-center gap-2 bg-indigo-50 border border-indigo-200 rounded-xl px-2.5 py-1">
                 <div className="hidden lg:flex flex-col text-left">
                   <span className="text-[10px] uppercase font-bold tracking-wider text-indigo-600 flex items-center gap-1">
-                    <UserCheck2 className="w-3 h-3" /> শিক্ষক প্যানেল
+                    <UserCheck2 className="w-3 h-3" /> {t('app.teacher.panel')}
                   </span>
                   <span className="text-xs font-medium text-indigo-950 truncate max-w-[120px]">
                     {teacherName}
                   </span>
                 </div>
                 <button
+                  type="button"
                   onClick={logout}
                   className="flex items-center gap-1 text-xs font-medium text-rose-600 hover:text-rose-700 hover:bg-rose-50 px-2 py-1 rounded-lg transition"
-                  title="লগআউট"
+                  title={t('app.teacher.logout')}
                 >
                   <LogOut className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">লগআউট</span>
+                  <span className="hidden sm:inline">{t('app.teacher.logout')}</span>
                 </button>
               </div>
             ) : (
               <button
+                type="button"
                 onClick={loginAsTeacher}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white shadow-sm transition active:scale-95"
-                title="শিক্ষক ডেমো লগইন করুন"
+                title={t('app.teacher.loginTitle')}
               >
                 <LogIn className="w-3.5 h-3.5" />
-                <span>শিক্ষক লগইন (Demo)</span>
+                <span>{t('app.teacher.loginLabel')}</span>
               </button>
             )}
 
@@ -134,12 +137,18 @@ export const Header: React.FC = () => {
 
             {/* Language Toggle Button */}
             <button
+              type="button"
               onClick={toggleLanguage}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50 transition shadow-sm"
-              title="Change Language"
+              title={
+                language === 'bn'
+                  ? t('app.language.switchToEn')
+                  : t('app.language.switchToBn')
+              }
             >
               <Globe className="w-3.5 h-3.5 text-slate-500" />
-              <span>{language === 'bn' ? 'English' : 'বাংলা'}</span>
+              {/* Each language is named in its own script, as users expect. */}
+              <span>{language === 'bn' ? 'English' : t('app.language.toggle')}</span>
             </button>
           </div>
         </div>
