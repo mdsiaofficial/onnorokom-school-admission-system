@@ -41,7 +41,7 @@
     "title": "Available Classes & Seats",
     "description": "Real-time updates of seat availability across classes and shifts.",
     "lastUpdated": "Last updated: {{time}}",
-    "pollingActive": "Auto-refreshing every 3s",
+    "pollingActive": "Live Update",
     "pollingError": "Connection lost, retrying...",
     "searchPlaceholder": "Search class name...",
     "empty": "No classes found.",
