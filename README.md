@@ -40,23 +40,58 @@ docker compose down
 
 ## 3. Automated Concurrency & Integration Tests
 
-### Run Tests via Docker
-```bash
-docker compose --profile test build backend-tests
-docker compose --profile test run --rm backend-tests
-```
-*(Or run `./scripts/test-e2e.sh`)*
+The project includes automated backend tests satisfying and exceeding the assignment requirement (*"Backend-এ অন্তত ৩টি automated test, যার একটি concurrency test"*):
 
-### Run Tests Locally
-```bash
-dotnet test backend/SchoolAdmission.sln --logger:"console;verbosity=normal"
-```
+### How to Run Tests
 
-or
+#### Option A: Run All Tests Together
+* **Via Docker (Recommended)**:
+  ```bash
+  docker compose --profile test build backend-tests
+  docker compose --profile test run --rm backend-tests
+  ```
+  *(Or execute `./scripts/test-e2e.sh`)*
 
-```bash
-dotnet test backend/SchoolAdmission.sln
-```
+* **Locally**:
+  ```bash
+  dotnet test backend/SchoolAdmission.sln --logger:"console;verbosity=normal"
+  ```
+
+---
+
+#### Option B: Run the 3 Tests Separately
+
+##### 1. Run Concurrency Overselling Test (1,000 parallel requests):
+* **Docker**:
+  ```bash
+  docker compose --profile test run --rm backend-tests --filter "FullyQualifiedName~ConcurrencyOversellingTests"
+  ```
+* **Local**:
+  ```bash
+  dotnet test backend/SchoolAdmission.sln --filter "FullyQualifiedName~ConcurrencyOversellingTests"
+  ```
+
+##### 2. Run Hold Expiry & Auto-Release Test:
+* **Docker**:
+  ```bash
+  docker compose --profile test run --rm backend-tests --filter "FullyQualifiedName~HoldExpiryTests"
+  ```
+* **Local**:
+  ```bash
+  dotnet test backend/SchoolAdmission.sln --filter "FullyQualifiedName~HoldExpiryTests"
+  ```
+
+##### 3. Run API Contracts & Idempotency Tests:
+* **Docker**:
+  ```bash
+  docker compose --profile test run --rm backend-tests --filter "FullyQualifiedName~ApiContractTests|FullyQualifiedName~ConcurrencySingleActiveApplicationTests|FullyQualifiedName~ConcurrencyIdempotentConfirmTests"
+  ```
+* **Local**:
+  ```bash
+  dotnet test backend/SchoolAdmission.sln --filter "FullyQualifiedName~ApiContractTests|FullyQualifiedName~ConcurrencySingleActiveApplicationTests|FullyQualifiedName~ConcurrencyIdempotentConfirmTests"
+  ```
+
+---
 
 ### Detailed Concurrency Test Output
 When the concurrency tests execute, they output formatted benchmark metrics directly to the console:

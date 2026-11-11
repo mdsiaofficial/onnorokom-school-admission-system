@@ -142,17 +142,80 @@ instead of silently falling back to 600 or throwing on a live request.
 
 ## 5. Testing
 
+The suite satisfies the requirement for at least 3 automated backend tests, with dedicated concurrency stress testing:
+
+### Core Automated Test Specifications (1, 2, 3)
+
+1. **Concurrency Overselling Test (Must-Have Requirement)**:
+   * **Implementation**: `ConcurrencyOversellingTests.cs`
+   * **Specification**: Dispatches **1,000 parallel HTTP requests** simultaneously across 1,000 distinct 17-digit student IDs targeting a class with 20 seats.
+   * **Verification**: Exactly 20 requests succeed (`201 Created`), 980 are rejected (`409 Conflict`), and oversold seats equals 0.
+
+2. **Seat Expiry & Autonomous Release Test**:
+   * **Implementation**: `HoldExpiryTests.cs`
+   * **Specification**: Verifies dynamic hold expiration (2-second TTL override). Expired seats immediately return to the available pool without manual API intervention, and expired payment confirmation attempts fail with `409 HOLD_EXPIRED`.
+
+3. **API Contract & Idempotency Tests**:
+   * **Implementation**: `ApiContractTests.cs`, `ConcurrencySingleActiveApplicationTests.cs`, `ConcurrencyIdempotentConfirmTests.cs`
+   * **Specification**: Verifies HTTP RFC 9457 ProblemDetails contracts across all endpoints, single active hold restriction per student ID (30 parallel requests), and idempotent payment confirmation under race conditions (20 concurrent confirms increment confirmed seats by exactly 1).
+
+### How to Run Tests
+
+#### 1. Run All Tests Combined
+* **Via Docker**:
+  ```bash
+  docker compose --profile test build backend-tests
+  docker compose --profile test run --rm backend-tests
+  ```
+* **Locally**:
+  ```bash
+  dotnet test backend/SchoolAdmission.sln --logger:"console;verbosity=normal"
+  ```
+
+#### 2. Run Tests Separately
+
+* **Test 1: Concurrency Overselling Test (1,000 parallel requests)**:
+  ```bash
+  # Docker
+  docker compose --profile test run --rm backend-tests --filter "FullyQualifiedName~ConcurrencyOversellingTests"
+
+  # Local
+  dotnet test backend/SchoolAdmission.sln --filter "FullyQualifiedName~ConcurrencyOversellingTests"
+  ```
+
+* **Test 2: Hold Expiry & Seat Release Test**:
+  ```bash
+  # Docker
+  docker compose --profile test run --rm backend-tests --filter "FullyQualifiedName~HoldExpiryTests"
+
+  # Local
+  dotnet test backend/SchoolAdmission.sln --filter "FullyQualifiedName~HoldExpiryTests"
+  ```
+
+* **Test 3: API Contracts, Idempotency & Single Active Application Tests**:
+  ```bash
+  # Docker
+  docker compose --profile test run --rm backend-tests --filter "FullyQualifiedName~ApiContractTests|FullyQualifiedName~ConcurrencySingleActiveApplicationTests|FullyQualifiedName~ConcurrencyIdempotentConfirmTests"
+
+  # Local
+  dotnet test backend/SchoolAdmission.sln --filter "FullyQualifiedName~ApiContractTests|FullyQualifiedName~ConcurrencySingleActiveApplicationTests|FullyQualifiedName~ConcurrencyIdempotentConfirmTests"
+  ```
+
+---
+
+### Test Suite Overview
+
 | Aspect | Approach |
 |---|---|
 | **Framework** | xUnit + `WebApplicationFactory<Program>` — boots the real API in-process. |
 | **Database** | The real PostgreSQL from Compose, not an in-memory substitute. In-memory providers do not model `FOR UPDATE`, `FILTER (WHERE …)` or unique-violation races, which is exactly what this app is about. |
-| **Concurrency** | `ConcurrencyOversellingTests` — many parallel applications against a 1-seat class; exactly one must win. |
+| **Concurrency** | `ConcurrencyOversellingTests` — 1,000 parallel applications against a 20-seat class; exactly 20 succeed, 0 oversold. |
 | **Idempotency** | `ConcurrencyIdempotentConfirmTests` — a repeated confirm must not consume a second seat. |
-| **Single active application** | `ConcurrencySingleActiveApplicationTests` — one student cannot hold two live holds in one class. |
-| **Expiry** | `HoldExpiryTests` — a 2-second hold (`ExpiryTestApiFactory` overrides the config) expires on its own, the seat returns to the pool, and confirming afterwards returns `409 HOLD_EXPIRED`. |
+| **Single active application** | `ConcurrencySingleActiveApplicationTests` — one student cannot hold two live holds across the school. |
+| **Expiry** | `HoldExpiryTests` — a 2-second hold expires on its own, seat returns to pool, and confirming afterwards returns `409 HOLD_EXPIRED`. |
 | **Validation** | `ValidationTests` — malformed payloads are rejected before any transaction opens. |
 | **Contract** | `ApiContractTests` — status codes and ProblemDetails payloads match the documented contract. |
-| **Runner** | `docker compose --profile test run --rm backend-tests` — the same image and database as production, so the environment under test is the environment that ships. |
+| **Runner** | `docker compose --profile test run --rm backend-tests` — the same image and database as production. |
 
 ---
 
